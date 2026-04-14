@@ -5,7 +5,7 @@ import { AnimatedCard } from "@/components/shared/animated-card";
 import { getTarefas } from "@/lib/supabase/queries";
 import { deleteTarefa, updateTarefa } from "@/lib/supabase/mutations";
 import type { Tarefa } from "@/types/database";
-import { Plus, CheckCircle2, Clock, AlertCircle, Edit2, Trash2, Calendar, ChevronDown, ChevronUp, AtSign, UserPlus, Tag, Target } from "lucide-react";
+import { Plus, CheckCircle2, Clock, AlertCircle, Edit2, Trash2, Calendar, ChevronDown, ChevronUp, AtSign, UserPlus, Tag, Target, RefreshCw } from "lucide-react";
 import { TaskModal } from "./task-modal";
 import { TaskFilters } from "./task-filters";
 import { SubtaskList } from "./subtask-list";
