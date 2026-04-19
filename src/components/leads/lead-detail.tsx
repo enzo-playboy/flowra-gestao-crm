@@ -23,12 +23,12 @@ export function LeadDetail({ id }: LeadDetailProps) {
   useEffect(() => {
     async function fetchData() {
       try {
-        const [leadData, messagesData] = await Promise.all([
-           getLead(id),
-           getLeadMessages(id)
-        ]);
+        const leadData = await getLead(id);
         setLead(leadData);
-        setMessages(messagesData);
+        if (leadData?.phone) {
+          const messagesData = await getLeadMessages(leadData.phone);
+          setMessages(messagesData);
+        }
       } catch (error) {
         console.error("Erro ao carregar lead:", error);
       } finally {
@@ -56,7 +56,7 @@ export function LeadDetail({ id }: LeadDetailProps) {
     };
 
     try {
-      const savedMsg = await addLeadMessage(lead.id, message);
+      const savedMsg = await addLeadMessage(lead.phone, message);
       if (savedMsg) {
         setMessages(prev => [...prev, savedMsg]);
         setNewMessage("");

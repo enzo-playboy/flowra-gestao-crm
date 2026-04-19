@@ -108,25 +108,45 @@ export async function updateLead(id: string, updates: Partial<Lead>): Promise<Le
   return data as Lead;
 }
 
-export async function getLeadMessages(leadId: string): Promise<any[]> {
+export async function getLeadMessages(phone: string): Promise<any[]> {
+  if (!phone) return [];
+  
   const { data, error } = await supabase
     .from("conversas")
     .select("*")
-    .eq("lead_id", leadId)
-    .order("created_at", { ascending: true });
+    .eq("whatsapp_id", phone);
   
   if (error) { console.warn("Supabase:", error); return []; }
-  return data || [];
+  
+  // Map Supabase columns to UI format
+  return (data || []).map(msg => ({
+    id: msg.id,
+    role: msg.mensagem_ia ? "assistant" : "user",
+    content: msg.mensagem_ia || msg.mensagem_usuario,
+    created_at: msg.created_at || new Date().toISOString()
+  }));
 }
 
-export async function addLeadMessage(leadId: string, message: { role: string; content: string; timestamp: string }): Promise<any> {
-  const { data, error } = await supabase.from("conversas").insert({
-    lead_id: leadId,
-    role: message.role,
-    content: message.content,
-    created_at: message.timestamp,
-  }).select().single();
+export async function addLeadMessage(phone: string, message: { role: string; content: string }): Promise<any> {
+  const payload: any = {
+    whatsapp_id: phone,
+    created_at: new Date().toISOString(),
+  };
+
+  if (message.role === "assistant" || message.role === "admin") {
+    payload.mensagem_ia = message.content;
+  } else {
+    payload.mensagem_usuario = message.content;
+  }
+
+  const { data, error } = await supabase.from("conversas").insert(payload).select().single();
   
   if (error) { console.warn("Supabase:", error); return null; }
-  return data;
+  
+  return {
+    id: data.id,
+    role: data.mensagem_ia ? "assistant" : "user",
+    content: data.mensagem_ia || data.mensagem_usuario,
+    created_at: data.created_at
+  };
 }
