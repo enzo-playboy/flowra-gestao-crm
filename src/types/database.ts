@@ -3,15 +3,18 @@ export interface Lead {
   name: string;
   email: string;
   phone: string;
+  company?: string;
   instagram: string;
+  source?: string;
   tags: string[];
   status: string;
+  metadata?: Record<string, unknown>;
   created_at: string;
   updated_at: string;
-  conversa: Record<string, unknown>[];
+  fase_atendimento?: string;
   payment_status?: "pago" | "pendente" | "falhou";
   payment_value?: number;
-  temperature?: "frio" | "morno" | "quente";
+  Temperatura?: "frio" | "morno" | "quente";
   score?: number; // 1 to 5
 }
 

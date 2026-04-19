@@ -83,7 +83,11 @@ export async function getDashboardStats() {
   const totalLeads = leads.length;
   const conversao = totalLeads > 0 ? (leadsQualificados / totalLeads) * 100 : 0;
 
-  const totalMensagens = leads.reduce((acc, lead) => acc + (lead.conversa?.length || 0), 0);
+  const { count: totalMensagens, error: msgError } = await supabase
+    .from("conversas")
+    .select("*", { count: "exact", head: true });
+
+  if (msgError) console.warn("Supabase:", msgError);
 
   return {
     totalLeads,
@@ -104,14 +108,25 @@ export async function updateLead(id: string, updates: Partial<Lead>): Promise<Le
   return data as Lead;
 }
 
-export async function addLeadMessage(leadId: string, message: { role: string; content: string; timestamp: string }): Promise<Lead | null> {
-  const { data: lead, error: fetchError } = await supabase.from("leads").select("conversa").eq("id", leadId).single();
-  if (fetchError) { console.warn("Supabase:", fetchError); return null; }
+export async function getLeadMessages(leadId: string): Promise<any[]> {
+  const { data, error } = await supabase
+    .from("conversas")
+    .select("*")
+    .eq("lead_id", leadId)
+    .order("created_at", { ascending: true });
+  
+  if (error) { console.warn("Supabase:", error); return []; }
+  return data || [];
+}
 
-  const currentConversa = lead.conversa || [];
-  const updatedConversa = [...currentConversa, message];
-
-  const { data, error } = await supabase.from("leads").update({ conversa: updatedConversa }).eq("id", leadId).select().single();
+export async function addLeadMessage(leadId: string, message: { role: string; content: string; timestamp: string }): Promise<any> {
+  const { data, error } = await supabase.from("conversas").insert({
+    lead_id: leadId,
+    role: message.role,
+    content: message.content,
+    created_at: message.timestamp,
+  }).select().single();
+  
   if (error) { console.warn("Supabase:", error); return null; }
-  return data as Lead;
+  return data;
 }

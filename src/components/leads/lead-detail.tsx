@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useRef } from "react";
 import { AnimatedCard } from "@/components/shared/animated-card";
-import { getLead, addLeadMessage } from "@/lib/supabase/queries";
+import { getLead, addLeadMessage, getLeadMessages } from "@/lib/supabase/queries";
 import type { Lead } from "@/types/database";
 import { getStatusColor } from "@/lib/utils";
 import { Mail, Phone, Instagram, Calendar, ArrowLeft, Send, User, Bot, Clock, Tag, Flame, Star } from "lucide-react";
@@ -14,6 +14,7 @@ interface LeadDetailProps {
 
 export function LeadDetail({ id }: LeadDetailProps) {
   const [lead, setLead] = useState<Lead | null>(null);
+  const [messages, setMessages] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [newMessage, setNewMessage] = useState("");
   const [sending, setSending] = useState(false);
@@ -22,8 +23,12 @@ export function LeadDetail({ id }: LeadDetailProps) {
   useEffect(() => {
     async function fetchData() {
       try {
-        const data = await getLead(id);
-        setLead(data);
+        const [leadData, messagesData] = await Promise.all([
+           getLead(id),
+           getLeadMessages(id)
+        ]);
+        setLead(leadData);
+        setMessages(messagesData);
       } catch (error) {
         console.error("Erro ao carregar lead:", error);
       } finally {
@@ -37,7 +42,7 @@ export function LeadDetail({ id }: LeadDetailProps) {
     if (scrollRef.current) {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
     }
-  }, [lead?.conversa]);
+  }, [lead?.id]); // Updated dependency
 
   const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -51,9 +56,9 @@ export function LeadDetail({ id }: LeadDetailProps) {
     };
 
     try {
-      const updatedLead = await addLeadMessage(lead.id, message);
-      if (updatedLead) {
-        setLead(updatedLead);
+      const savedMsg = await addLeadMessage(lead.id, message);
+      if (savedMsg) {
+        setMessages(prev => [...prev, savedMsg]);
         setNewMessage("");
       }
     } catch (error) {
@@ -180,12 +185,12 @@ export function LeadDetail({ id }: LeadDetailProps) {
                   <div className="flex items-center justify-between">
                     <span className="text-xs text-muted">Temperatura:</span>
                     <div className={`flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-bold ${
-                      lead.temperature === 'quente' ? 'bg-orange-500/10 text-orange-500' :
-                      lead.temperature === 'morno' ? 'bg-yellow-500/10 text-yellow-600' :
+                      lead.Temperatura === 'quente' ? 'bg-orange-500/10 text-orange-500' :
+                      lead.Temperatura === 'morno' ? 'bg-yellow-500/10 text-yellow-600' :
                       'bg-blue-500/10 text-blue-500'
                     }`}>
                       <Flame className="w-3.5 h-3.5" />
-                      {(lead.temperature || 'FRIO').toUpperCase()}
+                      {(lead.Temperatura || 'FRIO').toUpperCase()}
                     </div>
                   </div>
                   <div className="flex items-center justify-between">
@@ -238,8 +243,8 @@ export function LeadDetail({ id }: LeadDetailProps) {
               ref={scrollRef}
               className="flex-1 overflow-y-auto p-4 space-y-4 scroll-smooth"
             >
-              {lead.conversa && lead.conversa.length > 0 ? (
-                lead.conversa.map((msg: any, index: number) => {
+              {messages && messages.length > 0 ? (
+                messages.map((msg: any, index: number) => {
                   const isAssistant = msg.role === "assistant" || msg.role === "admin";
                   return (
                     <div 
@@ -259,7 +264,7 @@ export function LeadDetail({ id }: LeadDetailProps) {
                         }`}>
                           <p className="whitespace-pre-wrap">{msg.content}</p>
                           <span className={`text-[10px] block mt-1 opacity-50 ${isAssistant ? "text-right" : "text-left"}`}>
-                            {msg.timestamp ? new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : ''}
+                            {msg.created_at ? new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : ''}
                           </span>
                         </div>
                       </div>

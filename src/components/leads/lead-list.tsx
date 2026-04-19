@@ -162,14 +162,14 @@ export function LeadList() {
                         
                         {/* Temperatura e Score */}
                         <div className="flex items-center gap-3 mt-2">
-                          {lead.temperature && (
+                          {lead.Temperatura && (
                             <div className={`flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[9px] font-bold ${
-                              lead.temperature === 'quente' ? 'bg-orange-500/10 text-orange-500' :
-                              lead.temperature === 'morno' ? 'bg-yellow-500/10 text-yellow-600' :
+                              lead.Temperatura === 'quente' ? 'bg-orange-500/10 text-orange-500' :
+                              lead.Temperatura === 'morno' ? 'bg-yellow-500/10 text-yellow-600' :
                               'bg-blue-500/10 text-blue-500'
                             }`}>
                               <Flame className="w-2.5 h-2.5" />
-                              {lead.temperature.toUpperCase()}
+                              {lead.Temperatura.toUpperCase()}
                             </div>
                           )}
                           {(lead.score !== undefined && lead.score > 0) && (
