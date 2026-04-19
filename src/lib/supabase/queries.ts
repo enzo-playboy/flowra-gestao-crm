@@ -83,11 +83,12 @@ export async function getDashboardStats() {
   const totalLeads = leads.length;
   const conversao = totalLeads > 0 ? (leadsQualificados / totalLeads) * 100 : 0;
 
-  const { count: totalMensagens, error: msgError } = await supabase
+  const { count: msgCount, error: msgError } = await supabase
     .from("conversas")
     .select("*", { count: "exact", head: true });
 
   if (msgError) console.warn("Supabase:", msgError);
+  const totalMensagens: number = msgCount ?? 0;
 
   return {
     totalLeads,
@@ -114,7 +115,8 @@ export async function getLeadMessages(phone: string): Promise<any[]> {
   const { data, error } = await supabase
     .from("conversas")
     .select("*")
-    .eq("whatsapp_id", phone);
+    .eq("whatsapp_id", phone)
+    .order("created_at", { ascending: true });
   
   if (error) { console.warn("Supabase:", error); return []; }
   
