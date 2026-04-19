@@ -7,7 +7,7 @@ import { RevenueVsGoals } from "@/components/dashboard/revenue-vs-goals";
 import { AiAgentMetrics } from "@/components/dashboard/ai-agent-metrics";
 import { InstagramMetrics } from "@/components/dashboard/instagram-metrics";
 import { FinancialSummary } from "@/components/dashboard/financial-summary";
-import { getDashboardStats, getMetricas } from "@/lib/supabase/queries";
+import { getDashboardStats, getMetricas, type DashboardStats } from "@/lib/supabase/queries";
 import type { Metrica } from "@/types/database";
 import { AnimatedCard } from "@/components/shared/animated-card";
 import { Button } from "@/components/ui/button";
@@ -29,7 +29,7 @@ function SkeletonCard() {
 }
 
 export default function DashboardPage() {
-  const [stats, setStats] = useState({
+  const [stats, setStats] = useState<DashboardStats>({
     totalLeads: 0,
     leadsQualificados: 0,
     tarefasPendentes: 0,

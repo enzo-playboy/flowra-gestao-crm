@@ -61,7 +61,20 @@ export async function getMetricas(): Promise<Metrica[]> {
   return (data as Metrica[]) ?? [];
 }
 
-export async function getDashboardStats() {
+export interface DashboardStats {
+  totalLeads: number;
+  leadsQualificados: number;
+  tarefasPendentes: number;
+  reunioesHoje: number;
+  mrr: number;
+  conversao: number;
+  totalMensagens: number;
+  gastosDia: number;
+  lucro: number;
+  despesas: number;
+}
+
+export async function getDashboardStats(): Promise<DashboardStats> {
   const [leads, tarefas, reunioes, metricas] = await Promise.all([
     getLeads(),
     getTarefas(),
