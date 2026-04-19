@@ -36,6 +36,7 @@ export default function DashboardPage() {
     reunioesHoje: 0,
     mrr: 0,
     conversao: 0,
+    totalMensagens: 0,
     gastosDia: 0,
     lucro: 0,
     despesas: 0,

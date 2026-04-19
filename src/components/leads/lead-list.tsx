@@ -6,7 +6,7 @@ import { AnimatedCard } from "@/components/shared/animated-card";
 import { getLeads } from "@/lib/supabase/queries";
 import type { Lead } from "@/types/database";
 import { getStatusColor } from "@/lib/utils";
-import { Mail, Phone, Instagram, ChevronRight, Tag, Search, X } from "lucide-react";
+import { Mail, Phone, Instagram, ChevronRight, Tag, Search, X, Flame, Star } from "lucide-react";
 
 const tagColors: Record<string, string> = {
   novo: "bg-blue-500/10 text-blue-400",
@@ -159,6 +159,26 @@ export function LeadList() {
                             <span className="truncate">{lead.instagram}</span>
                           </div>
                         )}
+                        
+                        {/* Temperatura e Score */}
+                        <div className="flex items-center gap-3 mt-2">
+                          {lead.temperature && (
+                            <div className={`flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[9px] font-bold ${
+                              lead.temperature === 'quente' ? 'bg-orange-500/10 text-orange-500' :
+                              lead.temperature === 'morno' ? 'bg-yellow-500/10 text-yellow-600' :
+                              'bg-blue-500/10 text-blue-500'
+                            }`}>
+                              <Flame className="w-2.5 h-2.5" />
+                              {lead.temperature.toUpperCase()}
+                            </div>
+                          )}
+                          {(lead.score !== undefined && lead.score > 0) && (
+                            <div className="flex items-center gap-0.5 text-yellow-500">
+                              <Star className="w-2.5 h-2.5 fill-current" />
+                              <span className="text-[9px] font-bold">{lead.score}/5</span>
+                            </div>
+                          )}
+                        </div>
                       </div>
                     </div>
 

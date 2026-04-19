@@ -5,7 +5,7 @@ import { AnimatedCard } from "@/components/shared/animated-card";
 import { getLead, addLeadMessage } from "@/lib/supabase/queries";
 import type { Lead } from "@/types/database";
 import { getStatusColor } from "@/lib/utils";
-import { Mail, Phone, Instagram, Calendar, ArrowLeft, Send, User, Bot, Clock, Tag } from "lucide-react";
+import { Mail, Phone, Instagram, Calendar, ArrowLeft, Send, User, Bot, Clock, Tag, Flame, Star } from "lucide-react";
 import Link from "next/link";
 
 interface LeadDetailProps {
@@ -171,6 +171,34 @@ export function LeadDetail({ id }: LeadDetailProps) {
                       </div>
                     </a>
                   )}
+                </div>
+              </div>
+
+              <div className="space-y-4 pt-4 border-t border-border/50">
+                <h3 className="text-xs font-bold text-muted uppercase tracking-wider">Avaliação do Lead</h3>
+                <div className="flex flex-col gap-3">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs text-muted">Temperatura:</span>
+                    <div className={`flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-bold ${
+                      lead.temperature === 'quente' ? 'bg-orange-500/10 text-orange-500' :
+                      lead.temperature === 'morno' ? 'bg-yellow-500/10 text-yellow-600' :
+                      'bg-blue-500/10 text-blue-500'
+                    }`}>
+                      <Flame className="w-3.5 h-3.5" />
+                      {(lead.temperature || 'FRIO').toUpperCase()}
+                    </div>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs text-muted">Nota:</span>
+                    <div className="flex items-center gap-1">
+                      {[1, 2, 3, 4, 5].map((star) => (
+                        <Star 
+                          key={star} 
+                          className={`w-3.5 h-3.5 ${star <= (lead.score || 0) ? 'fill-yellow-500 text-yellow-500' : 'text-muted/30'}`} 
+                        />
+                      ))}
+                    </div>
+                  </div>
                 </div>
               </div>
 

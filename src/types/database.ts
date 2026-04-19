@@ -11,6 +11,8 @@ export interface Lead {
   conversa: Record<string, unknown>[];
   payment_status?: "pago" | "pendente" | "falhou";
   payment_value?: number;
+  temperature?: "frio" | "morno" | "quente";
+  score?: number; // 1 to 5
 }
 
 export interface Tarefa {

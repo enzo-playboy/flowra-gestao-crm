@@ -22,6 +22,7 @@ interface StatsCardsProps {
     reunioesHoje: number;
     mrr: number;
     conversao: number;
+    totalMensagens: number;
     gastosDia: number;
     lucro: number;
     despesas: number;
@@ -98,7 +99,7 @@ export function StatsCards({ stats }: StatsCardsProps) {
     },
     {
       label: "Mensagens Respondidas",
-      value: 0,
+      value: stats.totalMensagens,
       icon: MessageSquare,
       delay: 0.3,
       type: "number" as const,

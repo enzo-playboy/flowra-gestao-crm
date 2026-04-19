@@ -83,6 +83,8 @@ export async function getDashboardStats() {
   const totalLeads = leads.length;
   const conversao = totalLeads > 0 ? (leadsQualificados / totalLeads) * 100 : 0;
 
+  const totalMensagens = leads.reduce((acc, lead) => acc + (lead.conversa?.length || 0), 0);
+
   return {
     totalLeads,
     leadsQualificados,
@@ -90,6 +92,7 @@ export async function getDashboardStats() {
     reunioesHoje,
     mrr,
     conversao,
+    totalMensagens,
     gastosDia: ultimaMetrica?.gastos_dia ?? 0,
     lucro: ultimaMetrica?.lucro ?? 0,
     despesas: ultimaMetrica?.despesas ?? 0,

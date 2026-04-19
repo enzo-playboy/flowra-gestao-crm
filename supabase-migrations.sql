@@ -3,6 +3,24 @@
 -- Execute estas migrações manualmente no console do Supabase (SQL Editor)
 -- =============================================
 
+-- 0. Tabela de Leads (Base para todas as outras)
+CREATE TABLE IF NOT EXISTS leads (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  name TEXT NOT NULL,
+  email TEXT,
+  phone TEXT,
+  instagram TEXT,
+  tags TEXT[] DEFAULT '{}',
+  status TEXT DEFAULT 'novo',
+  conversa JSONB DEFAULT '[]',
+  payment_status TEXT DEFAULT 'pendente',
+  payment_value NUMERIC DEFAULT 0,
+  temperature TEXT DEFAULT 'frio',
+  score INTEGER DEFAULT 0,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
 -- 1. Tabela de Tarefas
 CREATE TABLE IF NOT EXISTS tarefas (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -58,7 +76,34 @@ CREATE TABLE IF NOT EXISTS anotacoes (
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- 5. Índices para performance
+-- 5. Tabela de Reuniões
+CREATE TABLE IF NOT EXISTS reunioes (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  lead_id UUID REFERENCES leads(id) ON DELETE SET NULL,
+  titulo TEXT NOT NULL,
+  data_hora TIMESTAMPTZ NOT NULL,
+  tags TEXT[] DEFAULT '{}',
+  necessidades TEXT DEFAULT '',
+  tipo TEXT DEFAULT 'outro',
+  status TEXT DEFAULT 'agendada',
+  notas TEXT,
+  created_by_agent BOOLEAN DEFAULT FALSE,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- 6. Tabela de Métricas
+CREATE TABLE IF NOT EXISTS metricas (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  data DATE DEFAULT CURRENT_DATE,
+  gastos_dia NUMERIC DEFAULT 0,
+  receita NUMERIC DEFAULT 0,
+  despesas NUMERIC DEFAULT 0,
+  lucro NUMERIC DEFAULT 0,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- 7. Índices para performance
+CREATE INDEX IF NOT EXISTS idx_leads_email ON leads(email);
 CREATE INDEX IF NOT EXISTS idx_tarefas_lead_id ON tarefas(lead_id);
 CREATE INDEX IF NOT EXISTS idx_subtarefas_tarefa_id ON subtarefas(tarefa_id);
 CREATE INDEX IF NOT EXISTS idx_projetos_lead_id ON projetos(lead_id);
@@ -80,3 +125,15 @@ CREATE POLICY "Allow all for anon" ON projetos FOR ALL TO anon USING (true) WITH
 ALTER TABLE anotacoes ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS "Allow all for anon" ON anotacoes;
 CREATE POLICY "Allow all for anon" ON anotacoes FOR ALL TO anon USING (true) WITH CHECK (true);
+
+ALTER TABLE leads ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Allow all for anon" ON leads;
+CREATE POLICY "Allow all for anon" ON leads FOR ALL TO anon USING (true) WITH CHECK (true);
+
+ALTER TABLE reunioes ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Allow all for anon" ON reunioes;
+CREATE POLICY "Allow all for anon" ON reunioes FOR ALL TO anon USING (true) WITH CHECK (true);
+
+ALTER TABLE metricas ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Allow all for anon" ON metricas;
+CREATE POLICY "Allow all for anon" ON metricas FOR ALL TO anon USING (true) WITH CHECK (true);

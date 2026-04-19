@@ -76,7 +76,7 @@ export function Sidebar({ isCollapsed, onToggle }: SidebarProps) {
         )}
         <button 
           onClick={onToggle}
-          className="p-1.5 rounded-lg hover:bg-accent/10 text-muted hover:text-accent transition-colors hidden lg:block"
+          className="p-1.5 rounded-lg hover:bg-accent/10 text-muted hover:text-accent transition-colors block md:block"
         >
           {isCollapsed ? <ChevronRight className="w-4 h-4" /> : <ChevronLeft className="w-4 h-4" />}
         </button>
@@ -96,6 +96,11 @@ export function Sidebar({ isCollapsed, onToggle }: SidebarProps) {
             >
               <Link
                 href={item.href}
+                onClick={() => {
+                  if (typeof window !== 'undefined' && window.innerWidth < 1024 && !isCollapsed) {
+                    onToggle();
+                  }
+                }}
                 className={cn(
                   "relative flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 group",
                   isActive
