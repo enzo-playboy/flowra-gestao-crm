@@ -1,3 +1,4 @@
+
 -- =============================================
 -- Flowra CRM - Database Initialization & Fixes
 -- Execute estas migrações manualmente no console do Supabase (SQL Editor)

@@ -235,7 +235,7 @@ export function LeadDetail({ id }: LeadDetailProps) {
                 <h3 className="font-medium">Histórico de Mensagens</h3>
               </div>
               <div className="text-xs text-muted">
-                {lead.conversa?.length || 0} mensagens trocadas
+                {messages?.length || 0} mensagens trocadas
               </div>
             </div>
 
