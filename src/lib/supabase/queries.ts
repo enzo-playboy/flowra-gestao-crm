@@ -1,5 +1,5 @@
 import { supabase } from "./client";
-import type { Lead, Tarefa, Reuniao, Anotacao, Projeto, Metrica } from "@/types/database";
+import type { Lead, Tarefa, Reuniao, Anotacao, Projeto, Metrica, Agente } from "@/types/database";
 
 export async function getLeads(): Promise<Lead[]> {
   const { data, error } = await supabase.from("leads").select("*").order("created_at", { ascending: false });

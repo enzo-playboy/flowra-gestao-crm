@@ -9,9 +9,11 @@ interface ModalProps {
   onClose: () => void;
   title: string;
   children: React.ReactNode;
+  size?: "sm" | "md" | "lg" | "xl" | "full" | string;
+  className?: string;
 }
 
-export function Modal({ isOpen, onClose, title, children }: ModalProps) {
+export function Modal({ isOpen, onClose, title, children, size = "lg", className = "" }: ModalProps) {
   // Prevent scrolling when modal is open
   useEffect(() => {
     if (isOpen) {
@@ -23,6 +25,14 @@ export function Modal({ isOpen, onClose, title, children }: ModalProps) {
       document.body.style.overflow = "unset";
     };
   }, [isOpen]);
+
+  const maxWidthClass = {
+    sm: "max-w-sm",
+    md: "max-w-md",
+    lg: "max-w-lg",
+    xl: "max-w-xl",
+    full: "max-w-full m-4",
+  }[size] || "max-w-lg";
 
   return (
     <AnimatePresence>
@@ -40,7 +50,7 @@ export function Modal({ isOpen, onClose, title, children }: ModalProps) {
               initial={{ opacity: 0, scale: 0.95, y: 20 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.95, y: 20 }}
-              className="bg-card border border-white/10 w-full max-w-lg rounded-2xl shadow-2xl pointer-events-auto overflow-hidden"
+              className={`bg-card border border-white/10 w-full ${maxWidthClass} rounded-2xl shadow-2xl pointer-events-auto overflow-hidden ${className}`}
             >
               <div className="flex items-center justify-between p-6 border-b border-white/5 bg-accent/5">
                 <h2 className="text-xl font-bold tracking-tight">{title}</h2>
