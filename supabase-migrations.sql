@@ -14,6 +14,17 @@ CREATE POLICY "Permitir leitura pública das conversas" ON conversas FOR SELECT 
 DROP POLICY IF EXISTS "Permitir inserção pública nas conversas" ON conversas;
 CREATE POLICY "Permitir inserção pública nas conversas" ON conversas FOR INSERT WITH CHECK (true);
 
+-- Adicionar colunas para suporte a Instagram
+DO $$ 
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='conversas' AND column_name='instagram_id') THEN
+        ALTER TABLE conversas ADD COLUMN instagram_id TEXT;
+    END IF;
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='conversas' AND column_name='platform') THEN
+        ALTER TABLE conversas ADD COLUMN platform TEXT DEFAULT 'whatsapp';
+    END IF;
+END $$;
+
 
 -- 0. Tabela de Leads (Base para todas as outras)
 CREATE TABLE IF NOT EXISTS leads (
@@ -122,6 +133,7 @@ CREATE TABLE IF NOT EXISTS metricas (
   data DATE DEFAULT CURRENT_DATE,
   gastos_dia NUMERIC DEFAULT 0,
   receita NUMERIC DEFAULT 0,
+  meta NUMERIC DEFAULT 0,
   despesas NUMERIC DEFAULT 0,
   lucro NUMERIC DEFAULT 0,
   created_at TIMESTAMPTZ DEFAULT NOW()
@@ -162,3 +174,27 @@ CREATE POLICY "Allow all for anon" ON reunioes FOR ALL TO anon USING (true) WITH
 ALTER TABLE metricas ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS "Allow all for anon" ON metricas;
 CREATE POLICY "Allow all for anon" ON metricas FOR ALL TO anon USING (true) WITH CHECK (true);
+
+-- 8. Tabela de Agentes de IA
+CREATE TABLE IF NOT EXISTS agentes (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  tipo TEXT NOT NULL UNIQUE, -- 'whatsapp' ou 'instagram'
+  nome TEXT NOT NULL,
+  instrucoes TEXT DEFAULT '',
+  status TEXT DEFAULT 'ativo',
+  configuracoes JSONB DEFAULT '{}',
+  last_active TIMESTAMPTZ DEFAULT NOW(),
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+ALTER TABLE agentes ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Allow all for anon" ON agentes;
+CREATE POLICY "Allow all for anon" ON agentes FOR ALL TO anon USING (true) WITH CHECK (true);
+
+-- Inserir agentes iniciais se nao existirem
+INSERT INTO agentes (tipo, nome, instrucoes, status)
+VALUES 
+  ('whatsapp', 'Agente WhatsApp', 'Responsavel por responder mensagens de novos leads e agendar reunioes automaticamente.', 'ativo'),
+  ('instagram', 'Agente Instagram', 'Monitora comentarios em postagens e realiza publicacoes agendadas para engajamento.', 'ativo')
+ON CONFLICT (tipo) DO NOTHING;

@@ -1,13 +1,15 @@
 "use client";
 
 import { AnimatedCard } from "@/components/shared/animated-card";
-import { Instagram, MessageCircle, UserPlus } from "lucide-react";
+import { Instagram, MessageCircle, UserPlus, Zap } from "lucide-react";
 
 export function InstagramMetrics() {
   const metrics = [
     { label: "Engajamento", value: "--", icon: Instagram },
     { label: "Novos Leads via DM", value: "--", icon: UserPlus },
     { label: "Taxa de Resposta", value: "--", icon: MessageCircle },
+    { label: "Comentarios Respondidos", value: "--", icon: MessageCircle },
+    { label: "Postagens Automaticas", value: "--", icon: Zap },
   ];
 
   return (

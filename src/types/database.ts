@@ -85,6 +85,7 @@ export interface Metrica {
   data: string;
   gastos_dia: number;
   receita: number;
+  meta: number;
   despesas: number;
   lucro: number;
 }
@@ -93,4 +94,16 @@ export type PipelineStatus = "novo" | "contato" | "qualificado" | "proposta" | "
 
 export interface PipelineLead extends Lead {
   pipeline_status: PipelineStatus;
+}
+
+export interface Agente {
+  id: string;
+  tipo: "whatsapp" | "instagram";
+  nome: string;
+  instrucoes: string;
+  status: "ativo" | "inativo";
+  configuracoes: Record<string, unknown>;
+  last_active: string;
+  created_at: string;
+  updated_at: string;
 }

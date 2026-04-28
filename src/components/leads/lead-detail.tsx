@@ -33,10 +33,8 @@ export function LeadDetail({ id }: LeadDetailProps) {
         setLead(leadData);
         if (leadData) {
           setFormData(leadData);
-          if (leadData.phone) {
-            const messagesData = await getLeadMessages(leadData.phone);
-            setMessages(messagesData);
-          }
+          const messagesData = await getLeadMessages(leadData.phone, leadData.instagram);
+          setMessages(messagesData);
         }
       } catch (error) {
         console.error("Erro ao carregar lead:", error);
@@ -54,9 +52,15 @@ export function LeadDetail({ id }: LeadDetailProps) {
   }, [id]);
 
   useEffect(() => {
-    if (!lead?.phone) return;
+    if (!lead) return;
 
-    // Supabase Realtime Subscription
+    // Supabase Realtime Subscription for both platforms
+    const filter = lead.phone && lead.instagram 
+      ? `or(whatsapp_id.eq.${lead.phone},instagram_id.eq.${lead.instagram})`
+      : lead.phone 
+      ? `whatsapp_id.eq.${lead.phone}`
+      : `instagram_id.eq.${lead.instagram}`;
+
     const channel = supabase
       .channel('realtime_conversas')
       .on(
@@ -65,20 +69,24 @@ export function LeadDetail({ id }: LeadDetailProps) {
           event: 'INSERT',
           schema: 'public',
           table: 'conversas',
-          filter: `whatsapp_id=eq.${lead.phone}`,
         },
         (payload: any) => {
+          const { whatsapp_id, instagram_id } = payload.new;
+          const isMatch = (lead.phone && whatsapp_id === lead.phone) || 
+                          (lead.instagram && instagram_id === lead.instagram);
+
+          if (!isMatch) return;
+
           const nova_msg = {
             id: payload.new.id,
-            role: payload.new.mensagem_ia ? "assistant" : "user",
+            role: payload.new.role || (payload.new.mensagem_ia ? "assistant" : "user"),
             content: payload.new.mensagem_ia || payload.new.mensagem_usuario,
+            platform: payload.new.platform || (payload.new.whatsapp_id ? "whatsapp" : "instagram"),
             created_at: payload.new.created_at,
           };
+
           setMessages((prev) => {
-            // Check if we already added this message optimistically
-            if (prev.some(m => m.id === nova_msg.id || (!m.id && m.content === nova_msg.content && m.role === nova_msg.role))) {
-              return prev;
-            }
+            if (prev.some(m => m.id === nova_msg.id)) return prev;
             return [...prev, nova_msg];
           });
         }
@@ -88,7 +96,7 @@ export function LeadDetail({ id }: LeadDetailProps) {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [lead?.phone]);
+  }, [lead?.phone, lead?.instagram]);
 
   useEffect(() => {
     if (scrollRef.current) {
@@ -109,7 +117,8 @@ export function LeadDetail({ id }: LeadDetailProps) {
     };
 
     try {
-      const savedMsg = await addLeadMessage(lead.phone, message);
+      const platform = lead.phone ? "whatsapp" : "instagram";
+      const savedMsg = await addLeadMessage(lead.phone, lead.instagram, { ...message, platform });
       if (savedMsg) {
         setMessages(prev => [...prev, savedMsg]);
         setNewMessage("");
@@ -442,10 +451,15 @@ export function LeadDetail({ id }: LeadDetailProps) {
                             ? "bg-purple-500 text-white rounded-br-none shadow-lg shadow-purple-500/20"
                             : "bg-muted/30 text-foreground rounded-bl-none border border-border"
                         }`}>
-                          <div className="flex items-center gap-2 mb-1">
+                          <div className="flex items-center justify-between gap-4 mb-1">
                             <span className={`text-[10px] font-bold uppercase tracking-wider opacity-70`}>
                               {isAdmin ? "VOCÊ" : isAssistant ? "IA FLOWRA" : lead.name?.split(' ')[0] || "LEAD"}
                             </span>
+                            {msg.platform && (
+                              <div className="opacity-40">
+                                {msg.platform === 'whatsapp' ? <Phone className="w-2.5 h-2.5" /> : <Instagram className="w-2.5 h-2.5" />}
+                              </div>
+                            )}
                           </div>
                           <p className="whitespace-pre-wrap">{msg.content}</p>
                           <span className={`text-[10px] block mt-1 opacity-50 ${isMeOrAI ? "text-right" : "text-left"}`}>

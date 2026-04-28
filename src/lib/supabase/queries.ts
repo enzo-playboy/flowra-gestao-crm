@@ -168,30 +168,38 @@ export async function updateLead(id: string, updates: Partial<Lead>): Promise<{ 
   return { data: data ? (data[0] as Lead) : null, error: null };
 }
 
-export async function getLeadMessages(phone: string): Promise<any[]> {
-  if (!phone) return [];
+export async function getLeadMessages(phone?: string, instagram?: string): Promise<any[]> {
+  if (!phone && !instagram) return [];
   
-  const { data, error } = await supabase
-    .from("conversas")
-    .select("*")
-    .eq("whatsapp_id", phone)
-    .order("created_at", { ascending: true });
+  let query = supabase.from("conversas").select("*");
+  
+  if (phone && instagram) {
+    query = query.or(`whatsapp_id.eq.${phone},instagram_id.eq.${instagram}`);
+  } else if (phone) {
+    query = query.eq("whatsapp_id", phone);
+  } else if (instagram) {
+    query = query.eq("instagram_id", instagram);
+  }
+  
+  const { data, error } = await query.order("created_at", { ascending: true });
   
   if (error) { console.warn("Supabase:", error); return []; }
   
-  // Map Supabase columns to UI format, using 'role' column if available
   return (data || []).map(msg => ({
     id: msg.id,
     role: msg.role || (msg.mensagem_ia ? "assistant" : "user"),
     content: msg.mensagem_ia || msg.mensagem_usuario,
+    platform: msg.platform || (msg.whatsapp_id ? "whatsapp" : "instagram"),
     created_at: msg.created_at || new Date().toISOString()
   }));
 }
 
-export async function addLeadMessage(phone: string, message: { role: string; content: string }): Promise<any> {
+export async function addLeadMessage(phone: string | null, instagram: string | null, message: { role: string; content: string; platform: string }): Promise<any> {
   const payload: any = {
     whatsapp_id: phone,
+    instagram_id: instagram,
     role: message.role, // "admin" ou "assistant"
+    platform: message.platform,
     created_at: new Date().toISOString(),
   };
 
@@ -209,6 +217,25 @@ export async function addLeadMessage(phone: string, message: { role: string; con
     id: data.id,
     role: data.role,
     content: data.mensagem_ia || data.mensagem_usuario,
+    platform: data.platform,
     created_at: data.created_at
   };
+}
+
+export async function updateMetrica(id: string, updates: Partial<Metrica>): Promise<any> {
+  const { data, error } = await supabase.from("metricas").update(updates).eq("id", id).select().single();
+  if (error) { console.error("Supabase Error:", error); return null; }
+  return data;
+}
+
+export async function getAgentes(): Promise<Agente[]> {
+  const { data, error } = await supabase.from("agentes").select("*");
+  if (error) { console.warn("Supabase:", error); return []; }
+  return (data as Agente[]) ?? [];
+}
+
+export async function updateAgente(id: string, updates: Partial<Agente>): Promise<any> {
+  const { data, error } = await supabase.from("agentes").update(updates).eq("id", id).select().single();
+  if (error) { console.error("Supabase Error:", error); return null; }
+  return data;
 }

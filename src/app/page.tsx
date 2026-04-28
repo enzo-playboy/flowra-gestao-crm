@@ -7,6 +7,7 @@ import { StatsCards } from "@/components/dashboard/stats-cards";
 import { RevenueVsGoals } from "@/components/dashboard/revenue-vs-goals";
 import { AiAgentMetrics } from "@/components/dashboard/ai-agent-metrics";
 import { InstagramMetrics } from "@/components/dashboard/instagram-metrics";
+import { AgentStatus } from "@/components/dashboard/agent-status";
 import { FinancialSummary } from "@/components/dashboard/financial-summary";
 import { getDashboardStats, getMetricas, type DashboardStats } from "@/lib/supabase/queries";
 import type { Metrica } from "@/types/database";
@@ -127,6 +128,7 @@ export default function DashboardPage() {
         transition={{ delay: 0.2 }}
       >
         <RevenueVsGoals metricas={metricas} />
+        <AgentStatus />
         <AiAgentMetrics />
         <InstagramMetrics />
       </motion.div>

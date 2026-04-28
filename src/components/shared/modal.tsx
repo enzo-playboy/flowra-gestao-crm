@@ -1,108 +1,62 @@
 "use client";
 
-import { useEffect, useRef } from "react";
-import { AnimatePresence, motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import { X } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { useEffect } from "react";
 
 interface ModalProps {
   isOpen: boolean;
   onClose: () => void;
   title: string;
   children: React.ReactNode;
-  className?: string;
-  size?: "sm" | "md" | "lg" | "xl";
 }
 
-export function Modal({
-  isOpen,
-  onClose,
-  title,
-  children,
-  className,
-  size = "md",
-}: ModalProps) {
+export function Modal({ isOpen, onClose, title, children }: ModalProps) {
+  // Prevent scrolling when modal is open
   useEffect(() => {
     if (isOpen) {
       document.body.style.overflow = "hidden";
     } else {
-      document.body.style.overflow = "";
+      document.body.style.overflow = "unset";
     }
     return () => {
-      document.body.style.overflow = "";
+      document.body.style.overflow = "unset";
     };
   }, [isOpen]);
-
-  useEffect(() => {
-    function handleKeyDown(e: KeyboardEvent) {
-      if (e.key === "Escape" && isOpen) {
-        onClose();
-      }
-    }
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [isOpen, onClose]);
-
-  const sizeClasses = {
-    sm: "max-w-sm",
-    md: "max-w-lg",
-    lg: "max-w-2xl",
-    xl: "max-w-4xl",
-  };
 
   return (
     <AnimatePresence>
       {isOpen && (
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          transition={{ duration: 0.2 }}
-          className="fixed inset-0 z-50 flex items-center justify-center p-4"
-          onClick={(e) => {
-            if (e.target === e.currentTarget) onClose();
-          }}
-        >
+        <>
           <motion.div
-            className="absolute inset-0 bg-black/60"
-            style={{ backdropFilter: "blur(8px)" }}
-            initial={{ backdropFilter: "blur(4px)" }}
-            animate={{ backdropFilter: "blur(8px)" }}
-            exit={{ backdropFilter: "blur(4px)" }}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onClick={onClose}
+            className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[100]"
           />
-
-          <motion.div
-            initial={{ opacity: 0, scale: 0.95, y: 20 }}
-            animate={{ opacity: 1, scale: 1, y: 0 }}
-            exit={{ opacity: 0, scale: 0.95, y: 20 }}
-            transition={{ duration: 0.3, ease: [0.175, 0.885, 0.32, 1.275] }}
-            className={cn(
-              "relative w-full glass-card max-h-[90vh] overflow-y-auto",
-              sizeClasses[size],
-              className
-            )}
-          >
-            <div className="flex items-center justify-between p-5 border-b border-border/50">
-              <h2 className="text-lg font-semibold">{title}</h2>
-              <motion.button
-                whileHover={{ scale: 1.1, rotate: 90 }}
-                whileTap={{ scale: 0.9 }}
-                onClick={onClose}
-                className="p-1.5 rounded-lg hover:bg-accent/10 transition-colors"
-              >
-                <X className="w-4 h-4" />
-              </motion.button>
-            </div>
+          <div className="fixed inset-0 flex items-center justify-center p-4 z-[101] pointer-events-none">
             <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ delay: 0.1 }}
-              className="p-5"
+              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 20 }}
+              className="bg-card border border-white/10 w-full max-w-lg rounded-2xl shadow-2xl pointer-events-auto overflow-hidden"
             >
-              {children}
+              <div className="flex items-center justify-between p-6 border-b border-white/5 bg-accent/5">
+                <h2 className="text-xl font-bold tracking-tight">{title}</h2>
+                <button
+                  onClick={onClose}
+                  className="p-2 hover:bg-white/5 rounded-lg transition-colors text-muted hover:text-foreground"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+              <div className="p-6">
+                {children}
+              </div>
             </motion.div>
-          </motion.div>
-        </motion.div>
+          </div>
+        </>
       )}
     </AnimatePresence>
   );
