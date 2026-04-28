@@ -13,6 +13,28 @@ export async function getLead(id: string): Promise<Lead | null> {
   return data as Lead;
 }
 
+export async function createLead(lead: Partial<Lead>): Promise<{ data: Lead | null; error: any }> {
+  // Lista de campos permitidos para insercao
+  const allowedFields = [
+    'name', 'email', 'phone', 'instagram', 'nicho', 'estado', 
+    'status', 'tags', 'source', 'company'
+  ];
+
+  const cleanLead: any = {};
+  allowedFields.forEach(field => {
+    if ((lead as any)[field] !== undefined) {
+      cleanLead[field] = (lead as any)[field];
+    }
+  });
+  
+  const { data, error } = await supabase.from("leads").insert(cleanLead).select();
+  if (error) { 
+    console.error("Supabase Error:", error); 
+    return { data: null, error }; 
+  }
+  return { data: data ? (data[0] as Lead) : null, error: null };
+}
+
 export async function getTarefas(): Promise<Tarefa[]> {
   const { data, error } = await supabase
     .from("tarefas")
@@ -116,10 +138,34 @@ export async function getDashboardStats(): Promise<DashboardStats> {
     despesas: ultimaMetrica?.despesas ?? 0,
   };
 }
-export async function updateLead(id: string, updates: Partial<Lead>): Promise<Lead | null> {
-  const { data, error } = await supabase.from("leads").update(updates).eq("id", id).select().single();
-  if (error) { console.warn("Supabase:", error); return null; }
-  return data as Lead;
+export async function updateLead(id: string, updates: Partial<Lead>): Promise<{ data: Lead | null; error: any }> {
+  // Lista de campos permitidos para atualizacao via form manual
+  const allowedFields = [
+    'name', 'email', 'phone', 'instagram', 'nicho', 'estado', 
+    'status', 'tags', 'source', 'company', 'payment_status', 
+    'payment_value', 'score'
+  ];
+
+  const cleanUpdates: any = {};
+  
+  allowedFields.forEach(field => {
+    if ((updates as any)[field] !== undefined) {
+      cleanUpdates[field] = (updates as any)[field];
+    }
+  });
+
+  // Tratamento especial para Temperatura se existir no objeto e nao for nulo
+  // No seu banco esta como USER-DEFINED (ENUM), entao temos que tomar cuidado
+  if ((updates as any).Temperatura) {
+     cleanUpdates.Temperatura = (updates as any).Temperatura;
+  }
+
+  const { data, error } = await supabase.from("leads").update(cleanUpdates).eq("id", id).select();
+  if (error) { 
+    console.error("Supabase Update Error:", error); 
+    return { data: null, error }; 
+  }
+  return { data: data ? (data[0] as Lead) : null, error: null };
 }
 
 export async function getLeadMessages(phone: string): Promise<any[]> {
@@ -133,10 +179,10 @@ export async function getLeadMessages(phone: string): Promise<any[]> {
   
   if (error) { console.warn("Supabase:", error); return []; }
   
-  // Map Supabase columns to UI format
+  // Map Supabase columns to UI format, using 'role' column if available
   return (data || []).map(msg => ({
     id: msg.id,
-    role: msg.mensagem_ia ? "assistant" : "user",
+    role: msg.role || (msg.mensagem_ia ? "assistant" : "user"),
     content: msg.mensagem_ia || msg.mensagem_usuario,
     created_at: msg.created_at || new Date().toISOString()
   }));
@@ -145,6 +191,7 @@ export async function getLeadMessages(phone: string): Promise<any[]> {
 export async function addLeadMessage(phone: string, message: { role: string; content: string }): Promise<any> {
   const payload: any = {
     whatsapp_id: phone,
+    role: message.role, // "admin" ou "assistant"
     created_at: new Date().toISOString(),
   };
 
@@ -160,7 +207,7 @@ export async function addLeadMessage(phone: string, message: { role: string; con
   
   return {
     id: data.id,
-    role: data.mensagem_ia ? "assistant" : "user",
+    role: data.role,
     content: data.mensagem_ia || data.mensagem_usuario,
     created_at: data.created_at
   };

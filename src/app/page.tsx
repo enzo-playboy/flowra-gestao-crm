@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import { motion } from "framer-motion";
 import { StatsCards } from "@/components/dashboard/stats-cards";
 import { RevenueVsGoals } from "@/components/dashboard/revenue-vs-goals";
@@ -104,10 +105,12 @@ export default function DashboardPage() {
           <p className="text-muted mt-1">Visao geral do seu CRM</p>
         </div>
         <div className="flex gap-2">
-          <Button variant="glass" size="sm">
-            <Plus className="w-4 h-4 mr-2" />
-            Novo Lead
-          </Button>
+          <Link href="/leads/novo">
+            <Button variant="glass" size="sm">
+              <Plus className="w-4 h-4 mr-2" />
+              Novo Lead
+            </Button>
+          </Link>
           <Button variant="glow" size="sm">
             <Zap className="w-4 h-4 mr-2" />
             Acoes Rapidas

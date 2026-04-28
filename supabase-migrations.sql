@@ -4,6 +4,17 @@
 -- Execute estas migrações manualmente no console do Supabase (SQL Editor)
 -- =============================================
 
+-- =============================================
+-- ATENÇÃO: PERMISSÕES DA TABELA CONVERSAS
+-- O n8n cria a tabela mas não abre as permissões de leitura (RLS)
+-- =============================================
+ALTER TABLE conversas ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Permitir leitura pública das conversas" ON conversas;
+CREATE POLICY "Permitir leitura pública das conversas" ON conversas FOR SELECT USING (true);
+DROP POLICY IF EXISTS "Permitir inserção pública nas conversas" ON conversas;
+CREATE POLICY "Permitir inserção pública nas conversas" ON conversas FOR INSERT WITH CHECK (true);
+
+
 -- 0. Tabela de Leads (Base para todas as outras)
 CREATE TABLE IF NOT EXISTS leads (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -18,9 +29,22 @@ CREATE TABLE IF NOT EXISTS leads (
   payment_value NUMERIC DEFAULT 0,
   temperature TEXT DEFAULT 'frio',
   score INTEGER DEFAULT 0,
+  nicho TEXT,
+  estado TEXT,
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
+
+-- Adicionar colunas caso a tabela ja exista
+DO $$ 
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='leads' AND column_name='nicho') THEN
+        ALTER TABLE leads ADD COLUMN nicho TEXT;
+    END IF;
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='leads' AND column_name='estado') THEN
+        ALTER TABLE leads ADD COLUMN estado TEXT;
+    END IF;
+END $$;
 
 -- 1. Tabela de Tarefas
 CREATE TABLE IF NOT EXISTS tarefas (

@@ -8,6 +8,8 @@ export interface Lead {
   source?: string;
   tags: string[];
   status: string;
+  nicho?: string;
+  estado?: string;
   metadata?: Record<string, unknown>;
   created_at: string;
   updated_at: string;

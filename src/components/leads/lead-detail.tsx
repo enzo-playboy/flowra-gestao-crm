@@ -3,10 +3,13 @@
 import { useEffect, useState, useRef } from "react";
 import { AnimatedCard } from "@/components/shared/animated-card";
 import { getLead, addLeadMessage, getLeadMessages } from "@/lib/supabase/queries";
+import { supabase } from "@/lib/supabase/client";
 import type { Lead } from "@/types/database";
 import { getStatusColor } from "@/lib/utils";
-import { Mail, Phone, Instagram, Calendar, ArrowLeft, Send, User, Bot, Clock, Tag, Flame, Star } from "lucide-react";
+import { Mail, Phone, Instagram, Calendar, ArrowLeft, Send, User, Bot, Clock, Tag, Flame, Star, Save, X, Edit2, Loader2 } from "lucide-react";
 import Link from "next/link";
+import { updateLead } from "@/lib/supabase/queries";
+import { useNotification } from "@/components/notifications/notification-provider";
 
 interface LeadDetailProps {
   id: string;
@@ -18,6 +21,9 @@ export function LeadDetail({ id }: LeadDetailProps) {
   const [loading, setLoading] = useState(true);
   const [newMessage, setNewMessage] = useState("");
   const [sending, setSending] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
+  const [formData, setFormData] = useState<Partial<Lead>>({});
+  const { addNotification } = useNotification();
   const scrollRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -25,9 +31,12 @@ export function LeadDetail({ id }: LeadDetailProps) {
       try {
         const leadData = await getLead(id);
         setLead(leadData);
-        if (leadData?.phone) {
-          const messagesData = await getLeadMessages(leadData.phone);
-          setMessages(messagesData);
+        if (leadData) {
+          setFormData(leadData);
+          if (leadData.phone) {
+            const messagesData = await getLeadMessages(leadData.phone);
+            setMessages(messagesData);
+          }
         }
       } catch (error) {
         console.error("Erro ao carregar lead:", error);
@@ -36,13 +45,57 @@ export function LeadDetail({ id }: LeadDetailProps) {
       }
     }
     fetchData();
+
+    // Set up real-time listener if we have a lead ID (will filter inside once we have the lead's phone)
+    let channel: any = null;
+    
+    // We can only subscribe to real-time events for this lead once we know the phone number.
+    // The subscription is actually better placed in a separate useEffect that depends on lead?.phone
   }, [id]);
+
+  useEffect(() => {
+    if (!lead?.phone) return;
+
+    // Supabase Realtime Subscription
+    const channel = supabase
+      .channel('realtime_conversas')
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'conversas',
+          filter: `whatsapp_id=eq.${lead.phone}`,
+        },
+        (payload: any) => {
+          const nova_msg = {
+            id: payload.new.id,
+            role: payload.new.mensagem_ia ? "assistant" : "user",
+            content: payload.new.mensagem_ia || payload.new.mensagem_usuario,
+            created_at: payload.new.created_at,
+          };
+          setMessages((prev) => {
+            // Check if we already added this message optimistically
+            if (prev.some(m => m.id === nova_msg.id || (!m.id && m.content === nova_msg.content && m.role === nova_msg.role))) {
+              return prev;
+            }
+            return [...prev, nova_msg];
+          });
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [lead?.phone]);
 
   useEffect(() => {
     if (scrollRef.current) {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
     }
-  }, [lead?.id]); // Updated dependency
+  }, [messages, lead?.id]); // Updated dependency to listen to messages changes too
+
 
   const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -50,7 +103,7 @@ export function LeadDetail({ id }: LeadDetailProps) {
 
     setSending(true);
     const message = {
-      role: "assistant",
+      role: "admin", // Marcando como admin pois foi enviado pelo CRM
       content: newMessage,
       timestamp: new Date().toISOString(),
     };
@@ -65,6 +118,39 @@ export function LeadDetail({ id }: LeadDetailProps) {
       console.error("Erro ao enviar mensagem:", error);
     } finally {
       setSending(false);
+    }
+  };
+
+  const handleUpdateLead = async () => {
+    if (!lead) return;
+    setLoading(true);
+    try {
+      const { data, error } = await updateLead(id, formData);
+      if (data) {
+        setLead(data);
+        setIsEditing(false);
+        addNotification({
+          type: "success",
+          title: "Lead atualizado",
+          message: "As informações foram salvas com sucesso.",
+        });
+      } else {
+        console.error("Erro detalhado do banco:", error);
+        addNotification({
+          type: "error",
+          title: "Erro ao salvar",
+          message: error?.message || (typeof error === 'string' ? error : JSON.stringify(error)) || "O banco recusou a atualização.",
+        });
+      }
+    } catch (error) {
+      console.error("Erro ao atualizar lead:", error);
+      addNotification({
+        type: "error",
+        title: "Erro ao salvar",
+        message: "Não foi possível atualizar as informações.",
+      });
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -119,9 +205,32 @@ export function LeadDetail({ id }: LeadDetailProps) {
              <span className={`px-3 py-1 rounded-full text-xs font-medium ${getStatusColor(lead.status)}`}>
                {lead.status.toUpperCase()}
              </span>
-             <button className="text-xs text-muted hover:text-foreground transition-colors">
-               Editar Lead
-             </button>
+             {isEditing ? (
+               <div className="flex gap-2">
+                 <button 
+                   onClick={() => setIsEditing(false)}
+                   className="p-2 rounded-lg bg-muted/20 text-muted hover:text-foreground transition-colors"
+                   title="Cancelar"
+                 >
+                   <X className="w-4 h-4" />
+                 </button>
+                 <button 
+                   onClick={handleUpdateLead}
+                   className="flex items-center gap-2 px-4 py-2 bg-accent text-white rounded-lg hover:bg-accent/90 transition-all text-xs font-bold shadow-lg shadow-accent/20"
+                 >
+                   <Save className="w-3.5 h-3.5" />
+                   SALVAR
+                 </button>
+               </div>
+             ) : (
+               <button 
+                 onClick={() => setIsEditing(true)}
+                 className="flex items-center gap-2 px-4 py-2 bg-muted/10 text-muted hover:text-foreground hover:bg-muted/20 rounded-lg transition-all text-xs font-medium"
+               >
+                 <Edit2 className="w-3.5 h-3.5" />
+                 Editar Lead
+               </button>
+             )}
         </div>
       </div>
 
@@ -143,39 +252,101 @@ export function LeadDetail({ id }: LeadDetailProps) {
               <div className="space-y-4">
                 <h3 className="text-xs font-bold text-muted uppercase tracking-wider">Contato</h3>
                 <div className="space-y-3">
-                  {lead.email && (
-                    <a href={`mailto:${lead.email}`} className="flex items-center gap-3 p-2 rounded-lg hover:bg-accent/5 transition-colors group">
-                      <div className="w-8 h-8 rounded-lg bg-blue-500/10 flex items-center justify-center text-blue-500 group-hover:scale-110 transition-transform">
+                  <div className="p-2 rounded-lg bg-accent/5 group">
+                    <div className="flex items-center gap-3 mb-2">
+                      <div className="w-8 h-8 rounded-lg bg-blue-500/10 flex items-center justify-center text-blue-500">
                         <Mail className="w-4 h-4" />
                       </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-xs text-muted">Email</p>
-                        <p className="text-sm truncate font-medium">{lead.email}</p>
-                      </div>
-                    </a>
-                  )}
-                  {lead.phone && (
-                    <a href={`tel:${lead.phone}`} className="flex items-center gap-3 p-2 rounded-lg hover:bg-accent/5 transition-colors group">
-                      <div className="w-8 h-8 rounded-lg bg-green-500/10 flex items-center justify-center text-green-500 group-hover:scale-110 transition-transform">
+                      <p className="text-xs text-muted">Email</p>
+                    </div>
+                    {isEditing ? (
+                      <input 
+                        type="email" 
+                        value={formData.email || ""} 
+                        onChange={(e) => setFormData({...formData, email: e.target.value})}
+                        className="w-full bg-background border border-border rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-accent/20 focus:border-accent outline-none"
+                      />
+                    ) : (
+                      <p className="text-sm truncate font-medium pl-11">{lead.email || "Não informado"}</p>
+                    )}
+                  </div>
+
+                  <div className="p-2 rounded-lg bg-accent/5 group">
+                    <div className="flex items-center gap-3 mb-2">
+                      <div className="w-8 h-8 rounded-lg bg-green-500/10 flex items-center justify-center text-green-500">
                         <Phone className="w-4 h-4" />
                       </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-xs text-muted">WhatsApp / Tel</p>
-                        <p className="text-sm truncate font-medium">{lead.phone}</p>
-                      </div>
-                    </a>
-                  )}
-                  {lead.instagram && (
-                    <a href={`https://instagram.com/${lead.instagram.replace('@', '')}`} target="_blank" rel="noopener noreferrer" className="flex items-center gap-3 p-2 rounded-lg hover:bg-accent/5 transition-colors group">
-                      <div className="w-8 h-8 rounded-lg bg-pink-500/10 flex items-center justify-center text-pink-500 group-hover:scale-110 transition-transform">
+                      <p className="text-xs text-muted">WhatsApp / Tel</p>
+                    </div>
+                    {isEditing ? (
+                      <input 
+                        type="text" 
+                        value={formData.phone || ""} 
+                        onChange={(e) => setFormData({...formData, phone: e.target.value})}
+                        className="w-full bg-background border border-border rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-accent/20 focus:border-accent outline-none"
+                      />
+                    ) : (
+                      <p className="text-sm truncate font-medium pl-11">{lead.phone || "Não informado"}</p>
+                    )}
+                  </div>
+
+                  <div className="p-2 rounded-lg bg-accent/5 group">
+                    <div className="flex items-center gap-3 mb-2">
+                      <div className="w-8 h-8 rounded-lg bg-pink-500/10 flex items-center justify-center text-pink-500">
                         <Instagram className="w-4 h-4" />
                       </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-xs text-muted">Instagram</p>
-                        <p className="text-sm truncate font-medium">{lead.instagram}</p>
+                      <p className="text-xs text-muted">Instagram</p>
+                    </div>
+                    {isEditing ? (
+                      <input 
+                        type="text" 
+                        value={formData.instagram || ""} 
+                        onChange={(e) => setFormData({...formData, instagram: e.target.value})}
+                        className="w-full bg-background border border-border rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-accent/20 focus:border-accent outline-none"
+                      />
+                    ) : (
+                      <p className="text-sm truncate font-medium pl-11">{lead.instagram || "Não informado"}</p>
+                    )}
+                  </div>
+                  
+                  {/* Novos campos: Nicho e Estado */}
+                  <div className="p-2 rounded-lg bg-accent/5 group">
+                    <div className="flex items-center gap-3 mb-2">
+                      <div className="w-8 h-8 rounded-lg bg-purple-500/10 flex items-center justify-center text-purple-500">
+                        <Tag className="w-4 h-4" />
                       </div>
-                    </a>
-                  )}
+                      <p className="text-xs text-muted">Nicho</p>
+                    </div>
+                    {isEditing ? (
+                      <input 
+                        type="text" 
+                        value={formData.nicho || ""} 
+                        onChange={(e) => setFormData({...formData, nicho: e.target.value})}
+                        className="w-full bg-background border border-border rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-accent/20 focus:border-accent outline-none"
+                      />
+                    ) : (
+                      <p className="text-sm truncate font-medium pl-11">{lead.nicho || "Não informado"}</p>
+                    )}
+                  </div>
+
+                  <div className="p-2 rounded-lg bg-accent/5 group">
+                    <div className="flex items-center gap-3 mb-2">
+                      <div className="w-8 h-8 rounded-lg bg-orange-500/10 flex items-center justify-center text-orange-500">
+                        <Calendar className="w-4 h-4" />
+                      </div>
+                      <p className="text-xs text-muted">Estado / Cidade</p>
+                    </div>
+                    {isEditing ? (
+                      <input 
+                        type="text" 
+                        value={formData.estado || ""} 
+                        onChange={(e) => setFormData({...formData, estado: e.target.value})}
+                        className="w-full bg-background border border-border rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-accent/20 focus:border-accent outline-none"
+                      />
+                    ) : (
+                      <p className="text-sm truncate font-medium pl-11">{lead.estado || "Não informado"}</p>
+                    )}
+                  </div>
                 </div>
               </div>
 
@@ -245,25 +416,39 @@ export function LeadDetail({ id }: LeadDetailProps) {
             >
               {messages && messages.length > 0 ? (
                 messages.map((msg: any, index: number) => {
-                  const isAssistant = msg.role === "assistant" || msg.role === "admin";
+                  const isAssistant = msg.role === "assistant";
+                  const isAdmin = msg.role === "admin";
+                  const isMeOrAI = isAssistant || isAdmin;
+                  
                   return (
                     <div 
                       key={index} 
-                      className={`flex ${isAssistant ? "justify-end" : "justify-start"} animate-scale-in`}
+                      className={`flex ${isMeOrAI ? "justify-end" : "justify-start"} animate-scale-in`}
                     >
-                      <div className={`max-w-[80%] flex items-end gap-2 ${isAssistant ? "flex-row-reverse" : "flex-row"}`}>
-                        <div className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 ${
-                          isAssistant ? "bg-accent text-white" : "bg-muted text-muted-foreground"
+                      <div className={`max-w-[80%] flex items-end gap-2 ${isMeOrAI ? "flex-row-reverse" : "flex-row"}`}>
+                        <div className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 shadow-sm ${
+                          isAssistant ? "bg-purple-500 text-white" : 
+                          isAdmin ? "bg-accent text-white" : 
+                          "bg-muted text-muted-foreground"
                         }`}>
-                          {isAssistant ? <Bot className="w-4 h-4" /> : <User className="w-4 h-4" />}
+                          {isAssistant ? <Bot className="w-4 h-4" /> : 
+                           isAdmin ? <User className="w-4 h-4" /> : 
+                           <User className="w-4 h-4" />}
                         </div>
                         <div className={`group relative p-3 rounded-2xl text-sm ${
-                          isAssistant 
-                            ? "bg-accent text-white rounded-br-none shadow-lg" 
+                          isAdmin 
+                            ? "bg-accent text-white rounded-br-none shadow-lg shadow-accent/20" 
+                            : isAssistant
+                            ? "bg-purple-500 text-white rounded-br-none shadow-lg shadow-purple-500/20"
                             : "bg-muted/30 text-foreground rounded-bl-none border border-border"
                         }`}>
+                          <div className="flex items-center gap-2 mb-1">
+                            <span className={`text-[10px] font-bold uppercase tracking-wider opacity-70`}>
+                              {isAdmin ? "VOCÊ" : isAssistant ? "IA FLOWRA" : lead.name?.split(' ')[0] || "LEAD"}
+                            </span>
+                          </div>
                           <p className="whitespace-pre-wrap">{msg.content}</p>
-                          <span className={`text-[10px] block mt-1 opacity-50 ${isAssistant ? "text-right" : "text-left"}`}>
+                          <span className={`text-[10px] block mt-1 opacity-50 ${isMeOrAI ? "text-right" : "text-left"}`}>
                             {msg.created_at ? new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : ''}
                           </span>
                         </div>
