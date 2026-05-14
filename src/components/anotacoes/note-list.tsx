@@ -375,6 +375,38 @@ function NoteForm({ initialData, onSuccess, onCancel }: {
                 required
                 autoFocus
               />
+              <AnimatePresence>
+                {showMentions && mentionField === "titulo" && mentionList.length > 0 && (
+                  <motion.div
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: 10 }}
+                    className="absolute left-0 top-full mt-2 w-full max-w-[300px] bg-white dark:bg-zinc-900 rounded-2xl shadow-2xl border border-border/10 overflow-hidden z-[100]"
+                  >
+                    <div className="p-3 bg-accent/5 border-b border-border/10">
+                      <p className="text-[10px] font-black text-accent uppercase tracking-widest">Marcar Cliente</p>
+                    </div>
+                    <div className="max-h-60 overflow-y-auto">
+                      {mentionList.map((lead) => (
+                        <button
+                          key={lead.id}
+                          type="button"
+                          onClick={() => selectLead(lead)}
+                          className="w-full px-4 py-3 flex items-center gap-3 hover:bg-accent/5 transition-colors text-left group"
+                        >
+                          <div className="w-8 h-8 rounded-lg bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center group-hover:bg-accent group-hover:text-white transition-all">
+                            <User className="w-4 h-4" />
+                          </div>
+                          <div>
+                            <p className="text-sm font-bold">{lead.name}</p>
+                            {lead.company && <p className="text-[10px] text-muted-foreground font-medium uppercase tracking-tighter">{lead.company}</p>}
+                          </div>
+                        </button>
+                      ))}
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
             </div>
 
             {initialData && (
@@ -473,7 +505,7 @@ function NoteForm({ initialData, onSuccess, onCancel }: {
                 />
 
                 <AnimatePresence>
-                  {showMentions && mentionList.length > 0 && (
+                  {showMentions && mentionField === "conteudo" && mentionList.length > 0 && (
                     <motion.div
                       initial={{ opacity: 0, y: 10 }}
                       animate={{ opacity: 1, y: 0 }}
