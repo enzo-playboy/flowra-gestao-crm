@@ -144,9 +144,9 @@ export function LeadDetail({ id }: LeadDetailProps) {
     setLoading(true);
     try {
       const dataToUpdate = { ...formData };
-      if (dataToUpdate.email === "") dataToUpdate.email = null;
-      if (dataToUpdate.phone === "") dataToUpdate.phone = null;
-      if (dataToUpdate.instagram === "") dataToUpdate.instagram = null;
+      if (dataToUpdate.email === "") dataToUpdate.email = undefined;
+      if (dataToUpdate.phone === "") dataToUpdate.phone = undefined;
+      if (dataToUpdate.instagram === "") dataToUpdate.instagram = undefined;
 
       const { data, error } = await updateLead(id, dataToUpdate);
       if (data) {
