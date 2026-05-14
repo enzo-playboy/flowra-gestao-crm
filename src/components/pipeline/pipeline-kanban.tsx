@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { AnimatedCard } from "@/components/shared/animated-card";
-import { getLeads } from "@/lib/supabase/queries";
+import { getLeads, updateLead } from "@/lib/supabase/queries";
 import type { Lead, PipelineStatus } from "@/types/database";
 import { getStatusColor } from "@/lib/utils";
 import { Mail, Phone, Instagram } from "lucide-react";
@@ -14,6 +14,7 @@ import {
   useSensor,
   useSensors,
   DragEndEvent,
+  useDroppable,
 } from "@dnd-kit/core";
 import {
   arrayMove,
@@ -63,18 +64,37 @@ export function PipelineKanban() {
     fetchData();
   }, []);
 
-  function handleDragEnd(event: DragEndEvent) {
+  async function handleDragEnd(event: DragEndEvent) {
     const { active, over } = event;
     if (!over || active.id === over.id) return;
 
-    const overColumn = columns.find((col) => col.id === over.id);
-    if (!overColumn) return;
+    let newStatus: PipelineStatus | null = null;
 
-    setLeads((prev) =>
-      prev.map((lead) =>
-        lead.id === active.id ? { ...lead, pipeline_status: overColumn.id as PipelineStatus } : lead
-      )
-    );
+    // Se dropou em cima de uma coluna (area vazia ou fundo)
+    const overColumn = columns.find((col) => col.id === over.id);
+    if (overColumn) {
+      newStatus = overColumn.id as PipelineStatus;
+    } else {
+      // Se dropou em cima de outro card
+      const overLead = leads.find((l) => l.id === over.id);
+      if (overLead) {
+        newStatus = overLead.pipeline_status;
+      }
+    }
+
+    if (newStatus) {
+      // Atualiza estado local na hora (optimistic update)
+      setLeads((prev) =>
+        prev.map((lead) =>
+          lead.id === active.id ? { ...lead, pipeline_status: newStatus as PipelineStatus, status: newStatus as string } : lead
+        )
+      );
+      
+      // Atualiza banco de dados em background
+      updateLead(active.id as string, { status: newStatus as string }).catch(err => {
+        console.error("Failed to save lead status", err);
+      });
+    }
   }
 
   if (loading) {
@@ -95,14 +115,11 @@ export function PipelineKanban() {
                 </span>
               </div>
               <SortableContext items={columnLeads.map((l) => l.id)} strategy={verticalListSortingStrategy}>
-                <div
-                  className="min-h-[200px] p-2 bg-card/50 rounded-xl border border-border border-dashed"
-                  data-column-id={column.id}
-                >
+                <DroppableColumn id={column.id}>
                   {columnLeads.map((lead, index) => (
                     <SortableLeadCard key={lead.id} lead={lead} index={index} />
                   ))}
-                </div>
+                </DroppableColumn>
               </SortableContext>
             </div>
           );
@@ -155,6 +172,19 @@ function SortableLeadCard({ lead, index }: { lead: PipelineLead; index: number }
           </div>
         )}
       </AnimatedCard>
+    </div>
+  );
+}
+
+function DroppableColumn({ id, children }: { id: string; children: React.ReactNode }) {
+  const { setNodeRef } = useDroppable({ id });
+
+  return (
+    <div
+      ref={setNodeRef}
+      className="min-h-[200px] p-2 bg-card/50 rounded-xl border border-border border-dashed flex flex-col gap-2"
+    >
+      {children}
     </div>
   );
 }

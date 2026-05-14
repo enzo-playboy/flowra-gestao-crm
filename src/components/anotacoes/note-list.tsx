@@ -2,14 +2,18 @@
 
 import { useEffect, useState, useRef } from "react";
 import { AnimatedCard } from "@/components/shared/animated-card";
-import { getAnotacoes } from "@/lib/supabase/queries";
+import { getAnotacoes, getAnotacoesByLeadId } from "@/lib/supabase/queries";
 import type { Anotacao } from "@/types/database";
 import { formatDate } from "@/lib/utils";
 import { Plus, Search, StickyNote, Trash2, X, Image as ImageIcon, Paperclip, Save, Calendar, Clock, ChevronRight, Loader2, ExternalLink } from "lucide-react";
 import { createAnotacao, deleteAnotacao, updateAnotacao } from "@/lib/supabase/mutations";
 import { supabase } from "@/lib/supabase/client";
 
-export function NoteList() {
+interface NoteListProps {
+  leadId?: string;
+}
+
+export function NoteList({ leadId }: NoteListProps = {}) {
   const [anotacoes, setAnotacoes] = useState<Anotacao[]>([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
@@ -18,7 +22,8 @@ export function NoteList() {
 
   const fetchData = async () => {
     try {
-      const data = await getAnotacoes();
+      setLoading(true);
+      const data = leadId ? await getAnotacoesByLeadId(leadId) : await getAnotacoes();
       setAnotacoes(data);
     } catch (error) {
       console.error("Erro ao carregar anotações:", error);
@@ -29,7 +34,7 @@ export function NoteList() {
 
   useEffect(() => {
     fetchData();
-  }, []);
+  }, [leadId]);
 
   const handleDelete = async (e: React.MouseEvent, id: string) => {
     e.stopPropagation();

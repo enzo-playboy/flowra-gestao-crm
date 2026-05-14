@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useMemo } from "react";
 import { AnimatedCard } from "@/components/shared/animated-card";
-import { getTarefas } from "@/lib/supabase/queries";
+import { getTarefas, getTarefasByLeadId } from "@/lib/supabase/queries";
 import { deleteTarefa, updateTarefa } from "@/lib/supabase/mutations";
 import type { Tarefa } from "@/types/database";
 import { Plus, CheckCircle2, Clock, AlertCircle, Edit2, Trash2, Calendar, ChevronDown, ChevronUp, AtSign, UserPlus, Tag, Target, RefreshCw } from "lucide-react";
@@ -12,7 +12,11 @@ import { SubtaskList } from "./subtask-list";
 import { cn } from "@/lib/utils";
 import { motion, AnimatePresence } from "framer-motion";
 
-export function TaskList() {
+interface TaskListProps {
+  leadId?: string;
+}
+
+export function TaskList({ leadId }: TaskListProps = {}) {
   const [tarefas, setTarefas] = useState<Tarefa[]>([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
@@ -26,11 +30,12 @@ export function TaskList() {
 
   useEffect(() => {
     fetchData();
-  }, []);
+  }, [leadId]);
 
   async function fetchData() {
     try {
-      const data = await getTarefas();
+      setLoading(true);
+      const data = leadId ? await getTarefasByLeadId(leadId) : await getTarefas();
       setTarefas(data || []);
     } catch (error) {
       console.error("Erro ao carregar tarefas:", error);

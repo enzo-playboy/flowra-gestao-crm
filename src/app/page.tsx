@@ -15,6 +15,7 @@ import { AnimatedCard } from "@/components/shared/animated-card";
 import { Button } from "@/components/ui/button";
 import { useNotification } from "@/components/notifications/notification-provider";
 import { Plus, TrendingUp, Zap } from "lucide-react";
+import { GamifiedTasks } from "@/components/dashboard/gamified-tasks";
 
 function SkeletonCard() {
   return (
@@ -131,6 +132,7 @@ export default function DashboardPage() {
         <AgentStatus />
         <AiAgentMetrics />
         <InstagramMetrics />
+        <GamifiedTasks className="lg:col-span-2" delay={0.5} />
       </motion.div>
 
       <motion.div

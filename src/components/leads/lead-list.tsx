@@ -6,7 +6,7 @@ import { AnimatedCard } from "@/components/shared/animated-card";
 import { getLeads } from "@/lib/supabase/queries";
 import type { Lead } from "@/types/database";
 import { getStatusColor } from "@/lib/utils";
-import { Mail, Phone, Instagram, ChevronRight, Tag, Search, X, Flame, Star } from "lucide-react";
+import { Mail, Phone, Instagram, ChevronRight, Tag, Search, X, Flame, Star, MessageCircle } from "lucide-react";
 
 const tagColors: Record<string, string> = {
   novo: "bg-blue-500/10 text-blue-400",
@@ -15,7 +15,11 @@ const tagColors: Record<string, string> = {
   frio: "bg-muted/10 text-muted",
 };
 
-export function LeadList() {
+interface LeadListProps {
+  onCallMade?: () => void;
+}
+
+export function LeadList({ onCallMade }: LeadListProps) {
   const [leads, setLeads] = useState<Lead[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<string>("todos");
@@ -94,6 +98,16 @@ export function LeadList() {
             }`}
           >
             Todos
+          </button>
+
+          <button
+            onClick={() => setFilter("novo")} // Ou qualquer tag que represente a meta
+            className={`px-6 py-2 rounded-xl text-sm font-bold whitespace-nowrap transition-all flex items-center gap-2 ${
+              filter === "novo" ? "bg-orange-500 text-white shadow-lg scale-105" : "text-orange-500/70 hover:text-orange-500 hover:bg-orange-500/10"
+            }`}
+          >
+            <Phone className="w-3.5 h-3.5" />
+            Meta: Para Ligar
           </button>
           
           {/* Default Categories suggested in audio */}
@@ -180,6 +194,40 @@ export function LeadList() {
                           )}
                         </div>
                       </div>
+                    </div>
+
+                    {/* Contact Actions */}
+                    <div className="flex items-center gap-2 mt-4 pt-4 border-t border-border/50">
+                      {lead.phone && (
+                        <>
+                          <button
+                            onClick={(e) => {
+                              e.preventDefault();
+                              window.location.href = `tel:${lead.phone}`;
+                              onCallMade?.();
+                            }}
+                            className="flex-1 flex items-center justify-center gap-2 py-2 rounded-xl bg-primary/10 text-primary text-[10px] font-black uppercase tracking-wider hover:bg-primary hover:text-white transition-all active:scale-95"
+                          >
+                            <Phone className="w-3 h-3" />
+                            Ligar
+                          </button>
+                          <button
+                            onClick={(e) => {
+                              e.preventDefault();
+                              const cleanPhone = lead.phone?.replace(/\D/g, "");
+                              window.open(`https://wa.me/${cleanPhone}`, "_blank");
+                            }}
+                            className="flex items-center justify-center p-2 rounded-xl bg-success/10 text-success hover:bg-success hover:text-white transition-all active:scale-95"
+                          >
+                            <MessageCircle className="w-4 h-4" />
+                          </button>
+                        </>
+                      )}
+                      {!lead.phone && (
+                        <div className="flex-1 text-[10px] text-muted-foreground italic text-center py-2">
+                          Sem telefone cadastrado
+                        </div>
+                      )}
                     </div>
 
                     <div className="mt-4 pt-4 border-t border-border/50 flex items-center justify-between">

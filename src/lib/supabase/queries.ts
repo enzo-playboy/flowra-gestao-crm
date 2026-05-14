@@ -22,10 +22,20 @@ export async function createLead(lead: Partial<Lead>): Promise<{ data: Lead | nu
 
   const cleanLead: any = {};
   allowedFields.forEach(field => {
-    if ((lead as any)[field] !== undefined) {
-      cleanLead[field] = (lead as any)[field];
+    const value = (lead as any)[field];
+    if (value !== undefined) {
+      // Se for string vazia em campos de contato, mandamos NULL para evitar erros de unique constraint
+      if (typeof value === 'string' && value.trim() === '' && ['email', 'phone', 'instagram'].includes(field)) {
+        cleanLead[field] = null;
+      } else {
+        cleanLead[field] = value;
+      }
     }
   });
+
+  // Novos campos que podem ter sido adicionados ao schema mas nao estao no allowedFields original
+  if ((lead as any).fase_atendimento) cleanLead.fase_atendimento = (lead as any).fase_atendimento;
+  if ((lead as any).Temperatura) cleanLead.Temperatura = (lead as any).Temperatura;
   
   const { data, error } = await supabase.from("leads").insert(cleanLead).select();
   if (error) { 
@@ -39,6 +49,22 @@ export async function getTarefas(): Promise<Tarefa[]> {
   const { data, error } = await supabase
     .from("tarefas")
     .select("*, lead_info:leads!tarefas_lead_id_fkey(name)")
+    .order("created_at", { ascending: false });
+  if (error) { console.warn("Supabase:", error); return []; }
+  
+  const transformed = (data as any[]).map(t => ({
+    ...t,
+    lead_nome: t.lead_info?.name
+  }));
+  
+  return transformed as Tarefa[];
+}
+
+export async function getTarefasByLeadId(leadId: string): Promise<Tarefa[]> {
+  const { data, error } = await supabase
+    .from("tarefas")
+    .select("*, lead_info:leads!tarefas_lead_id_fkey(name)")
+    .eq("lead_id", leadId)
     .order("created_at", { ascending: false });
   if (error) { console.warn("Supabase:", error); return []; }
   
@@ -73,6 +99,12 @@ export async function getAnotacoes(): Promise<Anotacao[]> {
 
 export async function getProjetos(): Promise<Projeto[]> {
   const { data, error } = await supabase.from("projetos").select("*").order("created_at", { ascending: false });
+  if (error) { console.warn("Supabase:", error); return []; }
+  return (data as Projeto[]) ?? [];
+}
+
+export async function getProjetosByLeadId(leadId: string): Promise<Projeto[]> {
+  const { data, error } = await supabase.from("projetos").select("*").eq("lead_id", leadId).order("created_at", { ascending: false });
   if (error) { console.warn("Supabase:", error); return []; }
   return (data as Projeto[]) ?? [];
 }
@@ -149,16 +181,20 @@ export async function updateLead(id: string, updates: Partial<Lead>): Promise<{ 
   const cleanUpdates: any = {};
   
   allowedFields.forEach(field => {
-    if ((updates as any)[field] !== undefined) {
-      cleanUpdates[field] = (updates as any)[field];
+    const value = (updates as any)[field];
+    if (value !== undefined) {
+      // Se for string vazia em campos de contato, mandamos NULL para evitar erros de unique constraint
+      if (typeof value === 'string' && value.trim() === '' && ['email', 'phone', 'instagram'].includes(field)) {
+        cleanUpdates[field] = null;
+      } else {
+        cleanUpdates[field] = value;
+      }
     }
   });
 
-  // Tratamento especial para Temperatura se existir no objeto e nao for nulo
-  // No seu banco esta como USER-DEFINED (ENUM), entao temos que tomar cuidado
-  if ((updates as any).Temperatura) {
-     cleanUpdates.Temperatura = (updates as any).Temperatura;
-  }
+  // Tratamento para novos campos e ENUMs
+  if ((updates as any).Temperatura) cleanUpdates.Temperatura = (updates as any).Temperatura;
+  if ((updates as any).fase_atendimento) cleanUpdates.fase_atendimento = (updates as any).fase_atendimento;
 
   const { data, error } = await supabase.from("leads").update(cleanUpdates).eq("id", id).select();
   if (error) { 
@@ -238,4 +274,15 @@ export async function updateAgente(id: string, updates: Partial<Agente>): Promis
   const { data, error } = await supabase.from("agentes").update(updates).eq("id", id).select().single();
   if (error) { console.error("Supabase Error:", error); return null; }
   return data;
+}
+export async function getProjetoByLeadId(leadId: string): Promise<Projeto | null> {
+  const { data, error } = await supabase.from("projetos").select("*").eq("lead_id", leadId).maybeSingle();
+  if (error) { console.warn("Supabase:", error); return null; }
+  return data as Projeto;
+}
+
+export async function getAnotacoesByLeadId(leadId: string): Promise<Anotacao[]> {
+  const { data, error } = await supabase.from("anotacoes").select("*").eq("lead_id", leadId).order("created_at", { ascending: false });
+  if (error) { console.warn("Supabase:", error); return []; }
+  return (data as Anotacao[]) ?? [];
 }

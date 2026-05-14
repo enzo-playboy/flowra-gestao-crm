@@ -61,6 +61,7 @@ export interface Reuniao {
 
 export interface Anotacao {
   id: string;
+  lead_id?: string;
   titulo: string;
   conteudo: string;
   arquivos: string[];
@@ -75,9 +76,15 @@ export interface Projeto {
   progresso_site: number;
   progresso_automacao: number;
   progresso_reunioes: number;
+  valor_projeto?: number;
+  observacoes?: string;
   status: string;
   created_at: string;
   updated_at: string;
+  site_atividades?: string;
+  n8n_automacao?: string;
+  agente_ia?: string;
+  obsidian_link?: string;
 }
 
 export interface Metrica {

@@ -144,6 +144,7 @@ export async function createAnotacao(data: {
   titulo: string;
   conteudo: string;
   arquivos?: string[];
+  lead_id?: string;
 }): Promise<any | null> {
   const { data: result, error } = await supabase
     .from("anotacoes")
@@ -151,6 +152,7 @@ export async function createAnotacao(data: {
       titulo: data.titulo,
       conteudo: data.conteudo,
       arquivos: data.arquivos || [],
+      lead_id: data.lead_id || null,
     })
     .select();
   if (error) { console.warn("Supabase:", error); return null; }
@@ -191,4 +193,46 @@ export async function createMetrica(data: {
     .single();
   if (error) { console.warn("Supabase:", error); return null; }
   return result;
+}
+
+export async function createProjeto(data: Partial<Projeto>): Promise<{ data: Projeto | null; error: any }> {
+  const { data: result, error } = await supabase
+    .from("projetos")
+    .insert({
+      lead_id: data.lead_id,
+      nome: data.nome,
+      status: data.status || "planejamento",
+      progresso_site: data.progresso_site || 0,
+      progresso_automacao: data.progresso_automacao || 0,
+      progresso_reunioes: data.progresso_reunioes || 0,
+      valor_projeto: data.valor_projeto || 0,
+      observacoes: data.observacoes || "",
+      site_atividades: data.site_atividades || "",
+      n8n_automacao: data.n8n_automacao || "",
+      agente_ia: data.agente_ia || "",
+      obsidian_link: data.obsidian_link || "",
+    })
+    .select()
+    .single();
+  
+  if (error) { 
+    console.warn("Supabase Project Error:", error); 
+    return { data: null, error }; 
+  }
+  return { data: result as Projeto, error: null };
+}
+
+export async function updateProjeto(id: string, updates: Partial<Projeto>): Promise<{ data: Projeto | null; error: any }> {
+  const { data: result, error } = await supabase
+    .from("projetos")
+    .update(updates)
+    .eq("id", id)
+    .select()
+    .single();
+    
+  if (error) { 
+    console.warn("Supabase Project Update Error:", error); 
+    return { data: null, error }; 
+  }
+  return { data: result as Projeto, error: null };
 }

@@ -1,9 +1,17 @@
+"use client";
+
 import { LeadList } from "@/components/leads/lead-list";
 import { Button } from "@/components/ui/button";
 import { Plus } from "lucide-react";
 import Link from "next/link";
+import { LeadMetaHeader } from "@/components/leads/lead-meta-header";
+import { useState } from "react";
 
 export default function LeadsPage() {
+  // Mock state for now, can be connected to DB/LocalStorage later
+  const [completed, setCompleted] = useState(0);
+  const goal = 5; // 30 per week / ~5 per day
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -18,7 +26,10 @@ export default function LeadsPage() {
           </Button>
         </Link>
       </div>
-      <LeadList />
+
+      <LeadMetaHeader completed={completed} total={goal} streak={3} />
+      
+      <LeadList onCallMade={() => setCompleted(prev => Math.min(prev + 1, goal))} />
     </div>
   );
 }
