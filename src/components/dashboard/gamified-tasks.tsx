@@ -121,7 +121,7 @@ export function GamifiedTasks({ className, delay = 0 }: GamifiedTasksProps) {
                 {task.text}
               </span>
               {!task.completed && (
-                <Button size="sm" variant="ghost" className="h-8 w-8 p-0 opacity-0 group-hover:opacity-100">
+                <Button size="sm" variant="default" className="h-8 w-8 p-0 opacity-0 group-hover:opacity-100">
                   <PhoneCall className="h-4 w-4 text-primary" />
                 </Button>
               )}
