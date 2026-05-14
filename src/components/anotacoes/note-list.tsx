@@ -2,12 +2,13 @@
 
 import { useEffect, useState, useRef } from "react";
 import { AnimatedCard } from "@/components/shared/animated-card";
-import { getAnotacoes, getAnotacoesByLeadId } from "@/lib/supabase/queries";
-import type { Anotacao } from "@/types/database";
+import { getAnotacoes, getAnotacoesByLeadId, getLeads } from "@/lib/supabase/queries";
+import type { Anotacao, Lead } from "@/types/database";
 import { formatDate } from "@/lib/utils";
-import { Plus, Search, StickyNote, Trash2, X, Image as ImageIcon, Paperclip, Save, Calendar, Clock, ChevronRight, Loader2, ExternalLink } from "lucide-react";
+import { Plus, Search, StickyNote, Trash2, X, Image as ImageIcon, Paperclip, Save, Calendar, Clock, ChevronRight, Loader2, ExternalLink, User } from "lucide-react";
 import { createAnotacao, deleteAnotacao, updateAnotacao } from "@/lib/supabase/mutations";
 import { supabase } from "@/lib/supabase/client";
+import { AnimatePresence, motion } from "framer-motion";
 
 interface NoteListProps {
   leadId?: string;
@@ -188,17 +189,90 @@ function NoteForm({ initialData, onSuccess, onCancel }: {
   const [titulo, setTitulo] = useState(initialData?.titulo || "");
   const [conteudo, setConteudo] = useState(initialData?.conteudo || "");
   const [arquivos, setArquivos] = useState<string[]>(initialData?.arquivos || []);
+  const [leadId, setLeadId] = useState<string | undefined>(initialData?.lead_id);
+  const [allLeads, setAllLeads] = useState<Lead[]>([]);
+  const [mentionList, setMentionList] = useState<Lead[]>([]);
+  const [showMentions, setShowMentions] = useState(false);
+  const [mentionQuery, setMentionQuery] = useState("");
+  const [mentionField, setMentionField] = useState<"titulo" | "conteudo" | null>(null);
+  const [mentionPosition, setMentionPosition] = useState({ top: 0, left: 0 });
   const [loading, setLoading] = useState(false);
   const [uploading, setUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const tituloRef = useRef<HTMLInputElement>(null);
+  const conteudoRef = useRef<HTMLTextAreaElement>(null);
+
+  useEffect(() => {
+    const fetchLeads = async () => {
+      const data = await getLeads();
+      setAllLeads(data);
+    };
+    fetchLeads();
+  }, []);
 
   useEffect(() => {
     if (initialData) {
       setTitulo(initialData.titulo);
       setConteudo(initialData.conteudo);
       setArquivos(initialData.arquivos || []);
+      setLeadId(initialData.lead_id);
     }
   }, [initialData]);
+
+  const handleTextChange = (field: "titulo" | "conteudo", value: string, element: HTMLInputElement | HTMLTextAreaElement) => {
+    if (field === "titulo") setTitulo(value);
+    else setConteudo(value);
+
+    const selectionStart = element.selectionStart || 0;
+    const textBeforeCursor = value.substring(0, selectionStart);
+    const lastAt = textBeforeCursor.lastIndexOf("@");
+
+    if (lastAt !== -1 && (lastAt === 0 || textBeforeCursor[lastAt - 1] === " ")) {
+      const query = textBeforeCursor.substring(lastAt + 1);
+      if (!query.includes(" ")) {
+        setMentionQuery(query);
+        setMentionField(field);
+        setShowMentions(true);
+        
+        // Simple position calculation
+        const rect = element.getBoundingClientRect();
+        setMentionPosition({ 
+          top: rect.top + window.scrollY - 100, 
+          left: rect.left + (selectionStart * 8) % rect.width 
+        });
+
+        const filtered = allLeads.filter(l => 
+          l.name.toLowerCase().includes(query.toLowerCase()) ||
+          l.company?.toLowerCase().includes(query.toLowerCase())
+        );
+        setMentionList(filtered.slice(0, 5));
+        return;
+      }
+    }
+    
+    setShowMentions(false);
+  };
+
+  const selectLead = (lead: Lead) => {
+    const field = mentionField;
+    const value = field === "titulo" ? titulo : conteudo;
+    const element = field === "titulo" ? tituloRef.current : conteudoRef.current;
+    if (!element) return;
+
+    const selectionStart = element.selectionStart || 0;
+    const textBeforeCursor = value.substring(0, selectionStart);
+    const textAfterCursor = value.substring(selectionStart);
+    const lastAt = textBeforeCursor.lastIndexOf("@");
+
+    const newValue = textBeforeCursor.substring(0, lastAt) + `@${lead.name} ` + textAfterCursor;
+    
+    if (field === "titulo") setTitulo(newValue);
+    else setConteudo(newValue);
+
+    setLeadId(lead.id);
+    setShowMentions(false);
+    element.focus();
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -207,9 +281,9 @@ function NoteForm({ initialData, onSuccess, onCancel }: {
     setLoading(true);
     try {
       if (initialData) {
-        await updateAnotacao(initialData.id, { titulo, conteudo, arquivos });
+        await updateAnotacao(initialData.id, { titulo, conteudo, arquivos, lead_id: leadId });
       } else {
-        await createAnotacao({ titulo, conteudo, arquivos });
+        await createAnotacao({ titulo, conteudo, arquivos, lead_id: leadId });
       }
       onSuccess();
     } catch (error) {
@@ -292,9 +366,10 @@ function NoteForm({ initialData, onSuccess, onCancel }: {
             <div className="space-y-3">
               <label className="text-[11px] font-black uppercase tracking-[0.2em] text-accent ml-1 font-sans">Contexto / Título</label>
               <input
+                ref={tituloRef}
                 type="text"
                 value={titulo}
-                onChange={(e) => setTitulo(e.target.value)}
+                onChange={(e) => handleTextChange("titulo", e.target.value, e.target)}
                 placeholder="Ex: Estratégia Mensal..."
                 className="w-full px-6 h-16 bg-zinc-50/50 dark:bg-zinc-100/10 border-none shadow-sm rounded-2xl text-lg font-bold focus:ring-4 focus:ring-accent/10 transition-all placeholder:text-muted/40"
                 required
@@ -389,12 +464,46 @@ function NoteForm({ initialData, onSuccess, onCancel }: {
               <label className="text-[11px] font-black uppercase tracking-[0.2em] text-accent ml-1 font-sans">Reflexão / Conteúdo</label>
               <div className="flex-1 relative group bg-zinc-50/50 dark:bg-zinc-100/10 rounded-[32px] overflow-hidden shadow-2xl shadow-black/5 flex flex-col border-2 border-transparent focus-within:border-accent/30 transition-all font-sans">
                 <textarea
+                  ref={conteudoRef}
                   value={conteudo}
-                  onChange={(e) => setConteudo(e.target.value)}
-                  placeholder="Descreva seu insight aqui. A clareza é a chave para a execução..."
+                  onChange={(e) => handleTextChange("conteudo", e.target.value, e.target)}
+                  placeholder="Descreva seu insight aqui. Use @ para marcar um cliente..."
                   className="flex-1 w-full px-8 py-8 bg-transparent text-xl leading-relaxed focus:outline-none resize-none font-medium placeholder:text-muted/30"
                   required
                 />
+
+                <AnimatePresence>
+                  {showMentions && mentionList.length > 0 && (
+                    <motion.div
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: 10 }}
+                      className="absolute left-8 bottom-full mb-2 w-72 bg-white dark:bg-zinc-900 rounded-2xl shadow-2xl border border-border/10 overflow-hidden z-[100]"
+                    >
+                      <div className="p-3 bg-accent/5 border-b border-border/10">
+                        <p className="text-[10px] font-black text-accent uppercase tracking-widest">Marcar Cliente</p>
+                      </div>
+                      <div className="max-h-60 overflow-y-auto">
+                        {mentionList.map((lead) => (
+                          <button
+                            key={lead.id}
+                            type="button"
+                            onClick={() => selectLead(lead)}
+                            className="w-full px-4 py-3 flex items-center gap-3 hover:bg-accent/5 transition-colors text-left group"
+                          >
+                            <div className="w-8 h-8 rounded-lg bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center group-hover:bg-accent group-hover:text-white transition-all">
+                              <User className="w-4 h-4" />
+                            </div>
+                            <div>
+                              <p className="text-sm font-bold">{lead.name}</p>
+                              {lead.company && <p className="text-[10px] text-muted-foreground font-medium uppercase tracking-tighter">{lead.company}</p>}
+                            </div>
+                          </button>
+                        ))}
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
                 
                 {/* Save Footer inside "Message Box" */}
                 <div className="p-6 bg-zinc-50/50 dark:bg-zinc-800/10 border-t border-border/10 flex items-center justify-between font-sans">

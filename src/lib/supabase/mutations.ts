@@ -161,7 +161,7 @@ export async function createAnotacao(data: {
 
 export async function updateAnotacao(
   id: string,
-  updates: Partial<{ titulo: string; conteudo: string; arquivos: string[] }>
+  updates: Partial<{ titulo: string; conteudo: string; arquivos: string[]; lead_id: string }>
 ): Promise<any | null> {
   const { data, error } = await supabase
     .from("anotacoes")
