@@ -1,5 +1,5 @@
 import { supabase } from "./client";
-import type { Tarefa, Reuniao, Subtarefa } from "@/types/database";
+import type { Tarefa, Reuniao, Subtarefa, Projeto } from "@/types/database";
 
 export async function createTarefa(data: {
   titulo: string;
