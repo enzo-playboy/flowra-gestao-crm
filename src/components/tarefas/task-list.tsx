@@ -193,10 +193,11 @@ export function TaskList({ leadId }: TaskListProps = {}) {
               key={tarefa.id} 
               className="group bg-card/40 backdrop-blur-xl border border-border/50 rounded-3xl overflow-hidden hover:border-accent/30 transition-all duration-300 shadow-xl shadow-accent/5"
             >
-              <div className="relative p-6">
-                <div className="flex items-start gap-6">
-                  {/* Status Indicator & Cycle */}
-                  <div className="flex flex-col items-center gap-2">
+              <div className="relative p-4 sm:p-6">
+                <div className="flex flex-col sm:flex-row items-start gap-4 sm:gap-6">
+                  <div className="flex flex-1 w-full items-start gap-3 sm:gap-6">
+                    {/* Status Indicator & Cycle */}
+                    <div className="flex flex-col items-center gap-2">
                     <button
                       onClick={async () => {
                         const statuses: Tarefa["status"][] = ["pendente", "em_progresso", "concluido"];
@@ -250,7 +251,7 @@ export function TaskList({ leadId }: TaskListProps = {}) {
                     </button>
                   </div>
 
-                  <div className="flex-1 min-w-0">
+                  <div className="flex-1 min-w-0 w-full">
                     <div className="flex flex-wrap items-center gap-2 mb-2">
                       <h3 
                         onClick={() => toggleTask(tarefa.id)}
@@ -323,17 +324,18 @@ export function TaskList({ leadId }: TaskListProps = {}) {
                       </div>
                     </div>
                   </div>
+                  </div>
 
-                  <div className="flex flex-col gap-2">
+                  <div className="flex flex-row sm:flex-col gap-2 w-full sm:w-auto justify-end border-t sm:border-0 border-border/10 pt-4 sm:pt-0">
                     <button
                       onClick={() => handleEdit(tarefa)}
-                      className="p-3 rounded-2xl bg-muted/5 hover:bg-accent/10 text-muted-foreground hover:text-accent border border-border/30 hover:border-accent/20 transition-all shadow-sm"
+                      className="flex-1 sm:flex-none p-3 flex items-center justify-center rounded-2xl bg-muted/5 hover:bg-accent/10 text-muted-foreground hover:text-accent border border-border/30 hover:border-accent/20 transition-all shadow-sm"
                     >
                       <Edit2 className="w-4 h-4" />
                     </button>
                     <button
                       onClick={() => handleDelete(tarefa.id)}
-                      className="p-3 rounded-2xl bg-muted/5 hover:bg-rose-500/10 text-muted-foreground hover:text-rose-500 border border-border/30 hover:border-rose-500/20 transition-all shadow-sm"
+                      className="flex-1 sm:flex-none p-3 flex items-center justify-center rounded-2xl bg-muted/5 hover:bg-rose-500/10 text-muted-foreground hover:text-rose-500 border border-border/30 hover:border-rose-500/20 transition-all shadow-sm"
                     >
                       <Trash2 className="w-4 h-4" />
                     </button>

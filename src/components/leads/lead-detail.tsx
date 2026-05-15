@@ -258,13 +258,13 @@ export function LeadDetail({ id }: LeadDetailProps) {
 
   return (
     <div className="space-y-6 max-w-6xl mx-auto">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
         <Link href="/leads" className="inline-flex items-center gap-2 text-muted hover:text-foreground transition-colors group">
           <ArrowLeft className="w-4 h-4 transition-transform group-hover:-translate-x-1" />
           Voltar aos leads
         </Link>
         
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center gap-2 sm:gap-3 w-full md:w-auto">
              <Link 
                href={`/projetos?leadId=${id}&name=${encodeURIComponent(lead.name || '')}`}
                className="flex items-center gap-2 px-4 py-2 bg-indigo-500/10 text-indigo-500 hover:bg-indigo-500/20 rounded-lg transition-all text-xs font-medium"
@@ -543,9 +543,9 @@ export function LeadDetail({ id }: LeadDetailProps) {
         </div>
 
         {/* Tabs Content */}
-        <div className="lg:col-span-2 flex flex-col h-[600px] lg:h-[700px]">
+        <div className="lg:col-span-2 flex flex-col min-h-[600px] lg:h-[700px]">
           {/* Tabs Navigation */}
-          <div className="flex items-center gap-2 mb-4 bg-card/50 p-1.5 rounded-xl border border-border">
+          <div className="flex items-center gap-2 mb-4 bg-card/50 p-1.5 rounded-xl border border-border overflow-x-auto whitespace-nowrap scrollbar-hide">
             <button
               onClick={() => setActiveTab("mensagens")}
               className={`flex-1 flex items-center justify-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all ${
