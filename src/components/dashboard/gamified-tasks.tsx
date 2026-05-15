@@ -186,7 +186,7 @@ export function GamifiedTasks({ className, delay = 0 }: GamifiedTasksProps) {
                       <>
                         <Button 
                           size="sm" 
-                          variant="ghost" 
+                          variant="glass" 
                           className="h-8 w-8 p-0 text-primary hover:bg-primary/10"
                           onClick={() => window.location.href = `tel:${lead.phone}`}
                         >
@@ -194,7 +194,7 @@ export function GamifiedTasks({ className, delay = 0 }: GamifiedTasksProps) {
                         </Button>
                         <Button 
                           size="sm" 
-                          variant="ghost" 
+                          variant="glass" 
                           className="h-8 w-8 p-0 text-success hover:bg-success/10"
                           onClick={() => {
                             const cleanPhone = lead.phone.replace(/\D/g, "");
