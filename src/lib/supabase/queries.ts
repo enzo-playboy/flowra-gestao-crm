@@ -2,9 +2,27 @@ import { supabase } from "./client";
 import type { Lead, Tarefa, Reuniao, Anotacao, Projeto, Metrica, Agente } from "@/types/database";
 
 export async function getLeads(): Promise<Lead[]> {
-  const { data, error } = await supabase.from("leads").select("*").order("created_at", { ascending: false });
+  const { data, error } = await supabase
+    .from("leads")
+    .select(`
+      *,
+      anotacoes:anotacoes(count),
+      tarefas:tarefas(count),
+      projetos:projetos(count)
+    `)
+    .order("created_at", { ascending: false });
+    
   if (error) { console.warn("Supabase:", error); return []; }
-  return (data as Lead[]) ?? [];
+  
+  // Transform counts from array/object to simple numbers
+  const transformed = (data as any[]).map(lead => ({
+    ...lead,
+    notes_count: lead.anotacoes?.[0]?.count || 0,
+    tasks_count: lead.tarefas?.[0]?.count || 0,
+    projects_count: lead.projetos?.[0]?.count || 0
+  }));
+  
+  return transformed as Lead[];
 }
 
 export async function getLead(id: string): Promise<Lead | null> {

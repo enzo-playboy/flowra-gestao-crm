@@ -3,11 +3,11 @@
 import { useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { AnimatedCard } from "@/components/shared/animated-card";
-import { getProjetos } from "@/lib/supabase/queries";
+import { getProjetos, getProjetosByLeadId } from "@/lib/supabase/queries";
 import { createProjeto, updateProjeto } from "@/lib/supabase/mutations";
 import type { Projeto } from "@/types/database";
 import { getStatusColor } from "@/lib/utils";
-import { Plus, Globe, Workflow, Calendar, Loader2, Edit2, Save, X, ChevronRight, ExternalLink } from "lucide-react";
+import { Plus, Globe, Workflow, Calendar, Loader2, Edit2, Save, X, ChevronRight, ExternalLink, FolderGit2 } from "lucide-react";
 import { useNotification } from "@/components/notifications/notification-provider";
 
 export function ProjectList({ leadId: propLeadId, initialName: propInitialName }: { leadId?: string, initialName?: string } = {}) {
@@ -21,27 +21,20 @@ export function ProjectList({ leadId: propLeadId, initialName: propInitialName }
 
   const refreshProjects = async () => {
     try {
-      let data = await getProjetos();
+      setLoading(true);
       if (leadId) {
-        const filtered = data.filter(p => p.lead_id === leadId);
-        if (filtered.length > 0) {
-          setProjetos(filtered);
-          return;
-        }
+        const data = await getProjetosByLeadId(leadId);
+        setProjetos(data);
+      } else {
+        const data = await getProjetos();
+        setProjetos(data);
       }
-      setProjetos(data);
     } catch (error) {
       console.error("Erro ao carregar projetos:", error);
     } finally {
       setLoading(false);
     }
   };
-
-  useEffect(() => {
-    if (leadId) {
-      setShowForm(true);
-    }
-  }, [leadId]);
 
   useEffect(() => {
     refreshProjects();
@@ -64,10 +57,10 @@ export function ProjectList({ leadId: propLeadId, initialName: propInitialName }
             setEditingProjeto(null);
             setShowForm(!showForm);
           }}
-          className="flex items-center gap-2 px-4 py-2 bg-accent text-white rounded-lg text-sm font-medium hover:bg-accent/90 transition-colors"
+          className="flex items-center gap-2 px-6 py-2.5 bg-accent text-white rounded-xl text-sm font-black hover:bg-accent/90 transition-all shadow-xl shadow-accent/20 active:scale-95"
         >
-          <Plus className="w-4 h-4" />
-          Novo Projeto
+          <Plus className="w-5 h-5" />
+          NOVO PROJETO
         </button>
       </div>
 
@@ -105,72 +98,84 @@ export function ProjectList({ leadId: propLeadId, initialName: propInitialName }
       ) : (
         <div className="grid grid-cols-1 gap-4">
           {projetos.map((projeto, index) => (
-            <AnimatedCard key={projeto.id} delay={index * 0.05} className="group">
-              <div className="flex items-start justify-between mb-4">
-                <div className="space-y-1">
-                  <div className="flex items-center gap-2">
-                    <h3 className="font-bold text-lg">{projeto.nome}</h3>
-                    <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider ${getStatusColor(projeto.status)}`}>
-                      {projeto.status}
-                    </span>
+            <AnimatedCard 
+              key={projeto.id} 
+              delay={index * 0.1} 
+              variant="glow"
+              className="group border-none bg-white/5 dark:bg-zinc-900/40 backdrop-blur-xl p-8 rounded-[32px] hover:shadow-2xl hover:shadow-accent/10 transition-all"
+            >
+              <div className="flex items-start justify-between mb-8">
+                <div className="space-y-2">
+                  <div className="flex items-center gap-4">
+                    <div className="w-12 h-12 rounded-2xl bg-accent/10 flex items-center justify-center text-accent">
+                      <FolderGit2 className="w-6 h-6" />
+                    </div>
+                    <div>
+                      <h3 className="font-black text-2xl tracking-tight">{projeto.nome}</h3>
+                      <span className={`inline-block mt-1 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest ${getStatusColor(projeto.status)}`}>
+                        {projeto.status}
+                      </span>
+                    </div>
                   </div>
                   {projeto.obsidian_link && (
                     <a 
                       href={projeto.obsidian_link} 
                       target="_blank" 
                       rel="noopener noreferrer"
-                      className="text-xs text-accent flex items-center gap-1 hover:underline"
+                      className="text-[11px] font-bold text-accent flex items-center gap-2 hover:underline pl-1"
                     >
-                      <ExternalLink className="w-3 h-3" />
-                      Documentação no Obsidian
+                      <ExternalLink className="w-3.5 h-3.5" />
+                      DOCUMENTAÇÃO ESTRATÉGICA (OBSIDIAN)
                     </a>
                   )}
                 </div>
-                <button 
-                  onClick={() => setEditingProjeto(projeto)}
-                  className="p-2 rounded-lg bg-muted/20 text-muted hover:text-accent hover:bg-accent/10 transition-all opacity-0 group-hover:opacity-100"
-                  title="Editar Projeto"
-                >
-                  <Edit2 className="w-4 h-4" />
-                </button>
+                <div className="flex gap-2">
+                  <button 
+                    onClick={() => setEditingProjeto(projeto)}
+                    className="p-3 rounded-2xl bg-accent/5 text-accent hover:bg-accent hover:text-white transition-all shadow-sm"
+                    title="Editar Projeto"
+                  >
+                    <Edit2 className="w-5 h-5" />
+                  </button>
+                </div>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
                 <ProgressBar
                   icon={Globe}
-                  label="Site Antigravity"
+                  label="Interface & UX"
                   progress={projeto.progresso_site}
                 />
                 <ProgressBar
                   icon={Workflow}
-                  label="Automação n8n"
+                  label="Inteligência n8n"
                   progress={projeto.progresso_automacao}
                 />
                 <ProgressBar
                   icon={Calendar}
-                  label="Reuniões Cliente"
+                  label="Sucesso do Cliente"
                   progress={projeto.progresso_reunioes}
                 />
               </div>
 
               {(projeto.site_atividades || projeto.n8n_automacao || projeto.agente_ia) && (
-                <div className="mt-6 pt-6 border-t border-border/50 grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="mt-8 pt-8 border-t border-zinc-100 dark:border-zinc-800/50 grid grid-cols-1 md:grid-cols-3 gap-6">
                   {projeto.site_atividades && (
-                    <div className="space-y-1">
-                      <p className="text-[10px] font-bold text-muted uppercase">Atividades Site</p>
-                      <p className="text-xs line-clamp-2 text-muted-foreground">{projeto.site_atividades}</p>
+                    <div className="space-y-2">
+                      <p className="text-[10px] font-black text-muted uppercase tracking-widest">Atividades de Interface</p>
+                      <p className="text-xs font-medium leading-relaxed text-muted-foreground line-clamp-3">{projeto.site_atividades}</p>
                     </div>
                   )}
                   {projeto.n8n_automacao && (
-                    <div className="space-y-1">
-                      <p className="text-[10px] font-bold text-muted uppercase">Fluxos n8n</p>
-                      <p className="text-xs line-clamp-2 text-muted-foreground">{projeto.n8n_automacao}</p>
+                    <div className="space-y-2">
+                      <p className="text-[10px] font-black text-muted uppercase tracking-widest">Ecossistema n8n</p>
+                      <p className="text-xs font-medium leading-relaxed text-muted-foreground line-clamp-3">{projeto.n8n_automacao}</p>
                     </div>
                   )}
                   {projeto.agente_ia && (
-                    <div className="space-y-1">
-                      <p className="text-[10px] font-bold text-muted uppercase">Agente IA</p>
-                      <p className="text-xs line-clamp-2 text-muted-foreground">{projeto.agente_ia}</p>
+                    <div className="space-y-2">
+                      <p className="text-[10px] font-black text-muted uppercase tracking-widest">Core do Agente IA</p>
+                      <p className="text-xs font-medium leading-relaxed text-muted-foreground line-clamp-3">{projeto.agente_ia}</p>
                     </div>
                   )}
                 </div>

@@ -205,6 +205,7 @@ function NoteForm({ initialData, onSuccess, onCancel }: {
   useEffect(() => {
     const fetchLeads = async () => {
       const data = await getLeads();
+      console.log("Leads carregados para marcação:", data.length);
       setAllLeads(data);
     };
     fetchLeads();
@@ -246,6 +247,7 @@ function NoteForm({ initialData, onSuccess, onCancel }: {
           l.company?.toLowerCase().includes(query.toLowerCase())
         );
         setMentionList(filtered.slice(0, 5));
+        console.log("Marcação detectada:", field, "Query:", query, "Resultados:", filtered.length);
         return;
       }
     }
@@ -363,7 +365,7 @@ function NoteForm({ initialData, onSuccess, onCancel }: {
         
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-10">
           <div className="lg:col-span-4 space-y-8">
-            <div className="space-y-3">
+            <div className="space-y-3 relative">
               <label className="text-[11px] font-black uppercase tracking-[0.2em] text-accent ml-1 font-sans">Contexto / Título</label>
               <input
                 ref={tituloRef}
@@ -381,7 +383,7 @@ function NoteForm({ initialData, onSuccess, onCancel }: {
                     initial={{ opacity: 0, y: 10 }}
                     animate={{ opacity: 1, y: 0 }}
                     exit={{ opacity: 0, y: 10 }}
-                    className="absolute left-0 top-full mt-2 w-full max-w-[300px] bg-white dark:bg-zinc-900 rounded-2xl shadow-2xl border border-border/10 overflow-hidden z-[100]"
+                    className="absolute left-0 top-full mt-2 w-full bg-white dark:bg-zinc-900 rounded-2xl shadow-2xl border border-border/10 overflow-hidden z-[100]"
                   >
                     <div className="p-3 bg-accent/5 border-b border-border/10">
                       <p className="text-[10px] font-black text-accent uppercase tracking-widest">Marcar Cliente</p>
@@ -494,7 +496,7 @@ function NoteForm({ initialData, onSuccess, onCancel }: {
           <div className="lg:col-span-8 flex flex-col font-sans">
             <div className="space-y-3 flex-1 flex flex-col">
               <label className="text-[11px] font-black uppercase tracking-[0.2em] text-accent ml-1 font-sans">Reflexão / Conteúdo</label>
-              <div className="flex-1 relative group bg-zinc-50/50 dark:bg-zinc-100/10 rounded-[32px] overflow-hidden shadow-2xl shadow-black/5 flex flex-col border-2 border-transparent focus-within:border-accent/30 transition-all font-sans">
+              <div className="flex-1 relative group bg-zinc-50/50 dark:bg-zinc-100/10 rounded-[32px] shadow-2xl shadow-black/5 flex flex-col border-2 border-transparent focus-within:border-accent/30 transition-all font-sans">
                 <textarea
                   ref={conteudoRef}
                   value={conteudo}
@@ -510,7 +512,7 @@ function NoteForm({ initialData, onSuccess, onCancel }: {
                       initial={{ opacity: 0, y: 10 }}
                       animate={{ opacity: 1, y: 0 }}
                       exit={{ opacity: 0, y: 10 }}
-                      className="absolute left-8 bottom-full mb-2 w-72 bg-white dark:bg-zinc-900 rounded-2xl shadow-2xl border border-border/10 overflow-hidden z-[100]"
+                      className="absolute left-8 bottom-[calc(100%+10px)] w-72 bg-white dark:bg-zinc-900 rounded-2xl shadow-2xl border border-border/10 overflow-hidden z-[100]"
                     >
                       <div className="p-3 bg-accent/5 border-b border-border/10">
                         <p className="text-[10px] font-black text-accent uppercase tracking-widest">Marcar Cliente</p>

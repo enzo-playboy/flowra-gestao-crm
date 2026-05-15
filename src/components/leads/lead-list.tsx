@@ -3,10 +3,12 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { AnimatedCard } from "@/components/shared/animated-card";
-import { getLeads } from "@/lib/supabase/queries";
+import { getLeads, updateLead } from "@/lib/supabase/queries";
 import type { Lead } from "@/types/database";
-import { getStatusColor } from "@/lib/utils";
-import { Mail, Phone, Instagram, ChevronRight, Tag, Search, X, Flame, Star, MessageCircle } from "lucide-react";
+import { getStatusColor, cn } from "@/lib/utils";
+import { Mail, Phone, Instagram, ChevronRight, Tag, Search, X, Flame, Star, MessageCircle, StickyNote, CheckSquare, FolderGit2 } from "lucide-react";
+import { CustomSelect } from "@/components/shared/custom-select";
+import { CallActionMenu } from "@/components/leads/call-action-menu";
 
 const tagColors: Record<string, string> = {
   novo: "bg-blue-500/10 text-blue-400",
@@ -24,6 +26,7 @@ export function LeadList({ onCallMade }: LeadListProps) {
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<string>("todos");
   const [searchTerm, setSearchTerm] = useState("");
+  const [openDropdownId, setOpenDropdownId] = useState<string | null>(null);
 
   useEffect(() => {
     async function fetchData() {
@@ -38,6 +41,24 @@ export function LeadList({ onCallMade }: LeadListProps) {
     }
     fetchData();
   }, []);
+
+  const handleStatusChange = async (leadId: string, newStatus: string) => {
+    try {
+      await updateLead(leadId, { status: newStatus });
+      setLeads(leads.map(l => l.id === leadId ? { ...l, status: newStatus } : l));
+    } catch (error) {
+      console.error("Erro ao atualizar status:", error);
+    }
+  };
+
+  const statusOptions = [
+    { value: 'novo', label: 'Novo', color: 'text-blue-500' },
+    { value: 'contato', label: 'Contato', color: 'text-yellow-500' },
+    { value: 'qualificado', label: 'Qualificado', color: 'text-accent' },
+    { value: 'proposta', label: 'Proposta', color: 'text-purple-500' },
+    { value: 'ganho', label: 'Ganho', color: 'text-green-500' },
+    { value: 'perdido', label: 'Perdido', color: 'text-red-500' },
+  ];
 
   const allTags = Array.from(new Set(leads.flatMap((l) => l.tags ?? [])));
   
@@ -143,107 +164,121 @@ export function LeadList({ onCallMade }: LeadListProps) {
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
           {filteredLeads.map((lead, index) => {
+            const isDropdownOpen = openDropdownId === lead.id;
             return (
-              <AnimatedCard key={lead.id} delay={index * 0.05} className="group hover:scale-[1.02] transition-all duration-300 p-4">
-                <Link href={`/leads/${lead.id}`} className="block h-full">
-                  <div className="flex flex-col h-full">
-                    <div className="flex items-start justify-between mb-4">
-                      <div className="w-10 h-10 bg-accent/10 rounded-full flex items-center justify-center text-accent font-bold group-hover:bg-accent group-hover:text-white transition-all duration-300">
-                        {lead.name ? lead.name.charAt(0).toUpperCase() : "?"}
-                      </div>
-                      <span className={`px-2 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wider ${getStatusColor(lead.status)}`}>
-                        {lead.status}
-                      </span>
+              <AnimatedCard 
+                key={lead.id} 
+                delay={index * 0.05} 
+                className={cn(
+                  "group hover:scale-[1.02] transition-all duration-300 p-4 relative flex flex-col h-full",
+                  isDropdownOpen ? "!z-[100]" : ""
+                )}
+              >
+                <Link href={`/leads/${lead.id}`} className="absolute inset-0 z-0" />
+                <div className="relative z-10 flex flex-col h-full pointer-events-none">
+                  <div className="flex items-start justify-between mb-4">
+                    <div className="w-10 h-10 bg-accent/10 rounded-full flex items-center justify-center text-accent font-bold group-hover:bg-accent group-hover:text-white transition-all duration-300">
+                      {lead.name ? lead.name.charAt(0).toUpperCase() : "?"}
                     </div>
-                    
-                    <div className="flex-1 min-w-0">
-                      <h3 className="font-bold text-sm truncate group-hover:text-accent transition-colors mb-1">
-                        {lead.name || "Sem nome"}
-                      </h3>
-                      <div className="space-y-1.5">
-                        {lead.email && (
-                          <div className="flex items-center gap-2 text-[10px] text-muted truncate">
-                            <Mail className="w-3 h-3 flex-shrink-0" />
-                            <span className="truncate">{lead.email}</span>
-                          </div>
-                        )}
-                        {lead.instagram && (
-                          <div className="flex items-center gap-2 text-[10px] text-muted truncate">
-                            <Instagram className="w-3 h-3 flex-shrink-0" />
-                            <span className="truncate">{lead.instagram}</span>
-                          </div>
-                        )}
-                        
-                        {/* Temperatura e Score */}
-                        <div className="flex items-center gap-3 mt-2">
-                          {lead.Temperatura && (
-                            <div className={`flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[9px] font-bold ${
-                              lead.Temperatura === 'quente' ? 'bg-orange-500/10 text-orange-500' :
-                              lead.Temperatura === 'morno' ? 'bg-yellow-500/10 text-yellow-600' :
-                              'bg-blue-500/10 text-blue-500'
-                            }`}>
-                              <Flame className="w-2.5 h-2.5" />
-                              {lead.Temperatura.toUpperCase()}
-                            </div>
-                          )}
-                          {(lead.score !== undefined && lead.score > 0) && (
-                            <div className="flex items-center gap-0.5 text-yellow-500">
-                              <Star className="w-2.5 h-2.5 fill-current" />
-                              <span className="text-[9px] font-bold">{lead.score}/5</span>
-                            </div>
-                          )}
-                        </div>
-                      </div>
+                    <div className="w-32 pointer-events-auto">
+                      <CustomSelect
+                        options={statusOptions}
+                        value={lead.status || 'novo'}
+                        onChange={(val) => handleStatusChange(lead.id, val)}
+                        onOpenChange={(isOpen) => setOpenDropdownId(isOpen ? lead.id : null)}
+                        className="!bg-transparent !border-none !py-0 shadow-none hover:shadow-none"
+                      />
                     </div>
-
-                    {/* Contact Actions */}
-                    <div className="flex items-center gap-2 mt-4 pt-4 border-t border-border/50">
-                      {lead.phone && (
-                        <>
-                          <button
-                            onClick={(e) => {
-                              e.preventDefault();
-                              window.location.href = `tel:${lead.phone}`;
-                              onCallMade?.();
-                            }}
-                            className="flex-1 flex items-center justify-center gap-2 py-2 rounded-xl bg-primary/10 text-primary text-[10px] font-black uppercase tracking-wider hover:bg-primary hover:text-white transition-all active:scale-95"
-                          >
-                            <Phone className="w-3 h-3" />
-                            Ligar
-                          </button>
-                          <button
-                            onClick={(e) => {
-                              e.preventDefault();
-                              const cleanPhone = lead.phone?.replace(/\D/g, "");
-                              window.open(`https://wa.me/${cleanPhone}`, "_blank");
-                            }}
-                            className="flex items-center justify-center p-2 rounded-xl bg-success/10 text-success hover:bg-success hover:text-white transition-all active:scale-95"
-                          >
-                            <MessageCircle className="w-4 h-4" />
-                          </button>
-                        </>
-                      )}
-                      {!lead.phone && (
-                        <div className="flex-1 text-[10px] text-muted-foreground italic text-center py-2">
-                          Sem telefone cadastrado
+                  </div>
+                  
+                  <div className="flex-1 min-w-0">
+                    <h3 className="font-bold text-sm truncate group-hover:text-accent transition-colors mb-1">
+                      {lead.name || "Sem nome"}
+                    </h3>
+                    <div className="space-y-1.5">
+                      {lead.email && (
+                        <div className="flex items-center gap-2 text-[10px] text-muted truncate">
+                          <Mail className="w-3 h-3 flex-shrink-0" />
+                          <span className="truncate">{lead.email}</span>
                         </div>
                       )}
-                    </div>
-
-                    <div className="mt-4 pt-4 border-t border-border/50 flex items-center justify-between">
-                      <div className="flex -space-x-2">
-                         {(lead.tags ?? []).slice(0, 2).map((tag) => (
-                           <div key={tag} className="w-5 h-5 rounded-full bg-muted border border-background flex items-center justify-center" title={tag}>
-                              <Tag className="w-2 h-2 text-muted-foreground" />
-                           </div>
-                         ))}
+                      {lead.instagram && (
+                        <div className="flex items-center gap-2 text-[10px] text-muted truncate">
+                          <Instagram className="w-3 h-3 flex-shrink-0" />
+                          <span className="truncate">{lead.instagram}</span>
+                        </div>
+                      )}
+                      
+                      {/* Temperatura e Score */}
+                      <div className="flex items-center gap-3 mt-2">
+                        {lead.Temperatura && (
+                          <div className={`flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[9px] font-bold ${
+                            lead.Temperatura === 'quente' ? 'bg-orange-500/10 text-orange-500' :
+                            lead.Temperatura === 'morno' ? 'bg-yellow-500/10 text-yellow-600' :
+                            'bg-blue-500/10 text-blue-500'
+                          }`}>
+                            <Flame className="w-2.5 h-2.5" />
+                            {lead.Temperatura.toUpperCase()}
+                          </div>
+                        )}
+                        {(lead.score !== undefined && lead.score > 0) && (
+                          <div className="flex items-center gap-0.5 text-yellow-500">
+                            <Star className="w-2.5 h-2.5 fill-current" />
+                            <span className="text-[9px] font-bold">{lead.score}/5</span>
+                          </div>
+                        )}
                       </div>
-                      <div className="w-6 h-6 rounded-full bg-accent/5 flex items-center justify-center group-hover:bg-accent group-hover:text-white transition-all">
-                        <ChevronRight className="w-3.5 h-3.5" />
+                      
+                      {/* Atividades Badges */}
+                      <div className="flex items-center gap-2 mt-3">
+                        {lead.projects_count !== undefined && lead.projects_count > 0 && (
+                          <div className="flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-indigo-500/10 text-indigo-500 text-[8px] font-bold" title="Projetos">
+                            <FolderGit2 className="w-2.5 h-2.5" />
+                            {lead.projects_count}
+                          </div>
+                        )}
+                        {lead.tasks_count !== undefined && lead.tasks_count > 0 && (
+                          <div className="flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-green-500/10 text-green-500 text-[8px] font-bold" title="Tarefas">
+                            <CheckSquare className="w-2.5 h-2.5" />
+                            {lead.tasks_count}
+                          </div>
+                        )}
+                        {lead.notes_count !== undefined && lead.notes_count > 0 && (
+                          <div className="flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-amber-500/10 text-amber-500 text-[8px] font-bold" title="Anotações">
+                            <StickyNote className="w-2.5 h-2.5" />
+                            {lead.notes_count}
+                          </div>
+                        )}
                       </div>
                     </div>
                   </div>
-                </Link>
+
+                  {/* Contact Actions */}
+                  <div className="mt-4 pt-4 border-t border-border/50 pointer-events-auto">
+                    <CallActionMenu 
+                      leadId={lead.id} 
+                      phone={lead.phone || null} 
+                      leadName={lead.name || "Lead"} 
+                      onOpenChange={(isOpen) => setOpenDropdownId(isOpen ? lead.id : null)}
+                      onActionComplete={() => {
+                        // Refresh will be handled manually or by fetching, but state can be updated locally if desired
+                      }}
+                    />
+                  </div>
+
+                  <div className="mt-4 pt-4 border-t border-border/50 flex items-center justify-between pointer-events-auto">
+                    <div className="flex -space-x-2">
+                       {(lead.tags ?? []).slice(0, 2).map((tag) => (
+                         <div key={tag} className="w-5 h-5 rounded-full bg-muted border border-background flex items-center justify-center" title={tag}>
+                            <Tag className="w-2 h-2 text-muted-foreground" />
+                         </div>
+                       ))}
+                    </div>
+                    <Link href={`/leads/${lead.id}`} className="w-6 h-6 rounded-full bg-accent/5 flex items-center justify-center hover:bg-accent hover:text-white transition-all">
+                      <ChevronRight className="w-3.5 h-3.5" />
+                    </Link>
+                  </div>
+                </div>
               </AnimatedCard>
             );
           })}

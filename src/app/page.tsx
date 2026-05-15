@@ -5,10 +5,6 @@ import Link from "next/link";
 import { motion } from "framer-motion";
 import { StatsCards } from "@/components/dashboard/stats-cards";
 import { RevenueVsGoals } from "@/components/dashboard/revenue-vs-goals";
-import { AiAgentMetrics } from "@/components/dashboard/ai-agent-metrics";
-import { InstagramMetrics } from "@/components/dashboard/instagram-metrics";
-import { AgentStatus } from "@/components/dashboard/agent-status";
-import { FinancialSummary } from "@/components/dashboard/financial-summary";
 import { getDashboardStats, getMetricas, type DashboardStats } from "@/lib/supabase/queries";
 import type { Metrica } from "@/types/database";
 import { AnimatedCard } from "@/components/shared/animated-card";
@@ -123,24 +119,13 @@ export default function DashboardPage() {
       <StatsCards stats={stats} />
 
       <motion.div
-        className="grid grid-cols-1 lg:grid-cols-4 gap-4"
+        className="grid grid-cols-1 lg:grid-cols-2 gap-4"
         initial={{ y: 20, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
         transition={{ delay: 0.2 }}
       >
         <RevenueVsGoals metricas={metricas} />
-        <AgentStatus />
-        <AiAgentMetrics />
-        <InstagramMetrics />
         <GamifiedTasks className="lg:col-span-2" delay={0.5} />
-      </motion.div>
-
-      <motion.div
-        initial={{ y: 20, opacity: 0 }}
-        animate={{ y: 0, opacity: 1 }}
-        transition={{ delay: 0.3 }}
-      >
-        <FinancialSummary gastosDia={stats.gastosDia} lucro={stats.lucro} despesas={stats.despesas} />
       </motion.div>
 
       {stats.totalLeads > 0 && stats.totalLeads % 10 === 0 && (

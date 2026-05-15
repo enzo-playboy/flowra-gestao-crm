@@ -18,6 +18,9 @@ export interface Lead {
   payment_value?: number;
   Temperatura?: "frio" | "morno" | "quente";
   score?: number; // 1 to 5
+  notes_count?: number;
+  tasks_count?: number;
+  projects_count?: number;
 }
 
 export interface Tarefa {

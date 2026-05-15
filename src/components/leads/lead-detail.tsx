@@ -5,14 +5,16 @@ import { AnimatedCard } from "@/components/shared/animated-card";
 import { getLead, addLeadMessage, getLeadMessages, getProjetoByLeadId } from "@/lib/supabase/queries";
 import { supabase } from "@/lib/supabase/client";
 import type { Lead } from "@/types/database";
-import { getStatusColor } from "@/lib/utils";
+import { getStatusColor, cn } from "@/lib/utils";
 import { Mail, Phone, Instagram, Calendar, ArrowLeft, Send, User, Bot, Clock, Tag, Flame, Star, Save, X, Edit2, Loader2, Layout, MessageSquare, StickyNote, CheckSquare, FolderGit2 } from "lucide-react";
 import Link from "next/link";
-import { updateLead } from "@/lib/supabase/queries";
+import { updateLead, getTarefasByLeadId, getAnotacoesByLeadId } from "@/lib/supabase/queries";
 import { useNotification } from "@/components/notifications/notification-provider";
 import { NoteList } from "@/components/anotacoes/note-list";
 import { TaskList } from "@/components/tarefas/task-list";
 import { ProjectList } from "@/components/projetos/project-list";
+import { CustomSelect } from "@/components/shared/custom-select";
+import { CallActionMenu } from "@/components/leads/call-action-menu";
 
 interface LeadDetailProps {
   id: string;
@@ -27,6 +29,12 @@ export function LeadDetail({ id }: LeadDetailProps) {
   const [sending, setSending] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [formData, setFormData] = useState<Partial<Lead>>({});
+  const [stats, setStats] = useState({
+    notes: 0,
+    tasks: 0,
+    projects: 0,
+    pendingTasks: 0
+  });
   const [activeTab, setActiveTab] = useState<"mensagens" | "anotacoes" | "tarefas" | "projetos">("mensagens");
   const { addNotification } = useNotification();
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -38,12 +46,20 @@ export function LeadDetail({ id }: LeadDetailProps) {
         setLead(leadData);
         if (leadData) {
           setFormData(leadData);
-          const [messagesData, projetoData] = await Promise.all([
+          const [messagesData, projetoData, tasksData, notesData] = await Promise.all([
             getLeadMessages(leadData.phone, leadData.instagram),
-            getProjetoByLeadId(id)
+            getProjetoByLeadId(id),
+            getTarefasByLeadId(id),
+            getAnotacoesByLeadId(id)
           ]);
           setMessages(messagesData);
           setProjeto(projetoData);
+          setStats({
+            notes: notesData.length,
+            tasks: tasksData.length,
+            projects: projetoData ? 1 : 0,
+            pendingTasks: tasksData.filter(t => t.status !== "concluido").length
+          });
         }
       } catch (error) {
         console.error("Erro ao carregar lead:", error);
@@ -136,6 +152,30 @@ export function LeadDetail({ id }: LeadDetailProps) {
       console.error("Erro ao enviar mensagem:", error);
     } finally {
       setSending(false);
+    }
+  };
+
+  const handleUpdateLeadField = async (field: keyof Lead, value: any) => {
+    if (!lead) return;
+    try {
+      const { data, error } = await updateLead(id, { [field]: value });
+      if (data) {
+        setLead(data);
+        addNotification({
+          type: "success",
+          title: "Atualizado",
+          message: `${field.charAt(0).toUpperCase() + field.slice(1)} atualizado com sucesso.`,
+        });
+      } else {
+        throw error;
+      }
+    } catch (error) {
+      console.error(`Erro ao atualizar ${field}:`, error);
+      addNotification({
+        type: "error",
+        title: "Erro",
+        message: "Não foi possível atualizar o campo.",
+      });
     }
   };
 
@@ -233,9 +273,23 @@ export function LeadDetail({ id }: LeadDetailProps) {
                {projeto ? "Ver Projeto" : "Criar Projeto"}
              </Link>
 
-             <span className={`px-3 py-1 rounded-full text-xs font-medium ${getStatusColor(lead.status)}`}>
-               {lead.status.toUpperCase()}
-             </span>
+             <div className="flex items-center gap-2">
+               <CustomSelect
+                 options={[
+                   { value: "novo", label: "NOVO", color: "text-muted-foreground" },
+                   { value: "contato", label: "CONTATO", color: "text-accent" },
+                   { value: "qualificado", label: "QUALIFICADO", color: "text-accent" },
+                   { value: "proposta", label: "PROPOSTA", color: "text-indigo-500" },
+                   { value: "fechado", label: "FECHADO", color: "text-success" },
+                   { value: "cancelada", label: "CANCELADO", color: "text-danger" },
+                 ]}
+                 value={lead.status}
+                 onChange={(val) => {
+                    handleUpdateLeadField('status', val);
+                 }}
+                 className="w-36"
+               />
+             </div>
              {isEditing ? (
                <div className="flex gap-2">
                  <button 
@@ -336,9 +390,36 @@ export function LeadDetail({ id }: LeadDetailProps) {
                         className="w-full bg-background border border-border rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-accent/20 focus:border-accent outline-none"
                       />
                     ) : (
-                      <p className="text-sm truncate font-medium pl-11">{lead.instagram || "Não informado"}</p>
-                    )}
+                    <div className="text-sm font-medium pl-11 flex items-center justify-between group-hover:pr-2 transition-all">
+                      <p className="truncate">{lead.instagram || "Não informado"}</p>
+                      {lead.instagram && (
+                        <button 
+                          onClick={() => window.open(`https://instagram.com/${lead.instagram?.replace('@', '')}`, '_blank')}
+                          className="opacity-0 group-hover:opacity-100 p-1.5 hover:bg-pink-500/10 text-pink-500 rounded-lg transition-all"
+                        >
+                          <Instagram className="w-3.5 h-3.5" />
+                        </button>
+                      )}
+                    </div>
+                  )}
+                </div>
+
+                <div className="p-2 rounded-xl bg-accent/5 hover:bg-accent/10 transition-colors group">
+                  <div className="flex items-center justify-between mb-2 px-1">
+                    <div className="flex items-center gap-2">
+                      <div className="w-7 h-7 rounded-lg bg-primary/10 flex items-center justify-center text-primary">
+                        <Phone className="w-3.5 h-3.5" />
+                      </div>
+                      <span className="text-[10px] font-black uppercase tracking-widest text-muted">Ações Rápidas</span>
+                    </div>
                   </div>
+                  <CallActionMenu 
+                    variant="full" 
+                    leadId={lead.id} 
+                    phone={lead.phone || null} 
+                    leadName={lead.name || "Lead"} 
+                  />
+                </div>
                   
                   {/* Novos campos: Nicho e Estado */}
                   <div className="p-2 rounded-lg bg-accent/5 group">
@@ -386,14 +467,16 @@ export function LeadDetail({ id }: LeadDetailProps) {
                 <div className="flex flex-col gap-3">
                   <div className="flex items-center justify-between">
                     <span className="text-xs text-muted">Temperatura:</span>
-                    <div className={`flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-bold ${
-                      lead.Temperatura === 'quente' ? 'bg-orange-500/10 text-orange-500' :
-                      lead.Temperatura === 'morno' ? 'bg-yellow-500/10 text-yellow-600' :
-                      'bg-blue-500/10 text-blue-500'
-                    }`}>
-                      <Flame className="w-3.5 h-3.5" />
-                      {(lead.Temperatura || 'FRIO').toUpperCase()}
-                    </div>
+                    <CustomSelect
+                      options={[
+                        { value: "frio", label: "FRIO", color: "text-blue-500", icon: <Flame className="w-3 h-3" /> },
+                        { value: "morno", label: "MORNO", color: "text-yellow-500", icon: <Flame className="w-3 h-3" /> },
+                        { value: "quente", label: "QUENTE", color: "text-orange-500", icon: <Flame className="w-3 h-3" /> },
+                      ]}
+                      value={lead.Temperatura?.toLowerCase() || "frio"}
+                      onChange={(val) => handleUpdateLeadField('Temperatura', val)}
+                      className="w-32"
+                    />
                   </div>
                   <div className="flex items-center justify-between">
                     <span className="text-xs text-muted">Nota:</span>
@@ -409,19 +492,50 @@ export function LeadDetail({ id }: LeadDetailProps) {
                 </div>
               </div>
 
-              <div className="space-y-4">
-                <h3 className="text-xs font-bold text-muted uppercase tracking-wider">Categorias / Tags</h3>
-                <div className="flex flex-wrap gap-2">
-                  {(lead.tags ?? []).length > 0 ? (
-                    (lead.tags ?? []).map((tag) => (
-                      <span key={tag} className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-bold bg-accent/10 text-accent border border-accent/20">
-                        <Tag className="w-3 h-3" />
-                        {tag.toUpperCase()}
-                      </span>
-                    ))
-                  ) : (
-                    <span className="text-xs text-muted italic">Nenhuma tag adicionada</span>
-                  )}
+              <div className="space-y-4 pt-4 border-t border-border/50">
+                <h3 className="text-xs font-bold text-muted uppercase tracking-wider">Atividade</h3>
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="p-3 rounded-xl bg-accent/5 border border-accent/10 flex flex-col items-center justify-center gap-1">
+                    <FolderGit2 className="w-4 h-4 text-indigo-500" />
+                    <span className="text-lg font-bold">{stats.projects}</span>
+                    <span className="text-[8px] text-muted uppercase font-black tracking-widest">Projetos</span>
+                  </div>
+                  <div className="p-3 rounded-xl bg-accent/5 border border-accent/10 flex flex-col items-center justify-center gap-1">
+                    <CheckSquare className="w-4 h-4 text-green-500" />
+                    <span className="text-lg font-bold">{stats.pendingTasks}</span>
+                    <span className="text-[8px] text-muted uppercase font-black tracking-widest">Tarefas</span>
+                  </div>
+                  <div className="p-3 rounded-xl bg-accent/5 border border-accent/10 flex flex-col items-center justify-center gap-1">
+                    <StickyNote className="w-4 h-4 text-amber-500" />
+                    <span className="text-lg font-bold">{stats.notes}</span>
+                    <span className="text-[8px] text-muted uppercase font-black tracking-widest">Anotações</span>
+                  </div>
+                  <div className="p-3 rounded-xl bg-accent/5 border border-accent/10 flex flex-col items-center justify-center gap-1">
+                    <MessageSquare className="w-4 h-4 text-blue-500" />
+                    <span className="text-lg font-bold">{messages.length}</span>
+                    <span className="text-[8px] text-muted uppercase font-black tracking-widest">Mensagens</span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="space-y-4 pt-4 border-t border-border/50">
+                <h3 className="text-xs font-bold text-muted uppercase tracking-wider">Financeiro</h3>
+                <div className="p-4 rounded-2xl bg-gradient-to-br from-accent/10 to-transparent border border-accent/10">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-xs text-muted">Status:</span>
+                    <span className={cn(
+                      "px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-widest",
+                      lead.payment_status === "pago" ? "bg-green-500/10 text-green-500" : "bg-rose-500/10 text-rose-500"
+                    )}>
+                      {lead.payment_status || "PENDENTE"}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs text-muted">Investimento:</span>
+                    <span className="text-sm font-bold text-foreground">
+                      {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(lead.payment_value || 0)}
+                    </span>
+                  </div>
                 </div>
               </div>
             </div>
